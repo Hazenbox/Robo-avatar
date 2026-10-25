@@ -60,28 +60,30 @@ const S = {
   scale: 0.84,
   /** The shell: half its width; above and below the middle, how far it reaches and how square it is. */
   w: 1.255,
-  top: 0.94,
-  bottom: 0.94,
+  top: 0.92,
+  bottom: 0.985,
   nTop: 2.3,
-  nSide: 2.6,
+  nBottom: 3.1,
+  nSide: 2.7,
   /**
-   * The glass: half its size, centred on the shell (sy is its drop below the
-   * middle). It is a superellipse of power 3: every side bows out, no edge
-   * is straight.
+   * The glass: half its size, and its drop below the shell's middle. It is a
+   * superellipse of power 3: every side bows out, no edge is straight.
    */
-  sw: 0.99,
-  sh: 0.67,
+  sw: 1.057,
+  sh: 0.71,
   sn: 3,
-  sy: 0,
+  sy: 0.077,
   /**
-   * The rim light's line: the same superellipse as the glass, the same
-   * distance in on every side (0.08), and centred on it.
+   * The rim light's line: a slightly squarer superellipse (3.3), half its
+   * size, and where its middle sits from the glass's. It is about 0.1 in from
+   * the glass at the top and sides but hugs the bottom (0.04), as the light
+   * sits on the glass's inner bevel, seen from a touch above.
    */
-  rw: 0.91,
-  rh: 0.59,
-  rn: 3,
-  rdx: 0,
-  rdy: 0,
+  rw: 0.966,
+  rh: 0.64,
+  rn: 3.3,
+  rdx: 0.0075,
+  rdy: 0.0285,
   /** How far the screen travels across the front as it turns. */
   depth: 0.5,
   /** The turn, in radians at yaw / pitch = ±1: a box can't turn as far as a ball. */
@@ -98,8 +100,8 @@ const S = {
   hornTop: 0.123,
   hornTip: -1.235,
   /** Eye centres, either side of the screen's middle, and below it. */
-  eyeX: 0.35,
-  eyeY: 0,
+  eyeX: 0.39,
+  eyeY: 0.072,
 };
 
 /** Its lowest point, for the floor shadow. */
@@ -189,11 +191,12 @@ function roundRect(cx: number, cy: number, hw: number, hh: number, r: number): P
 }
 
 /**
- * The shell's outline: one superellipse, the same above and below the middle
- * and the same left and right, so the head is symmetric both ways.
+ * The shell's outline: one superellipse, rounded alike at top and bottom and
+ * left and right (the base a touch flatter and reaching a touch lower than
+ * the crown), so the head reads as a soft pebble.
  */
 function shellPath(R: number): Path2D {
-  return blob(0, 0, S.w * R, S.top * R, S.bottom * R, S.nTop, S.nTop, S.nSide);
+  return blob(0, 0, S.w * R, S.top * R, S.bottom * R, S.nTop, S.nBottom, S.nSide);
 }
 
 /** The screen's outline, grown by `d` all round (negative to shrink); a little rounder as it grows. */
@@ -598,7 +601,7 @@ function light(x: Ctx, R: number, c: RGB = GLYPH, glow: RGB = BLOOM) {
 const STROKE = 0.084;
 
 /** Glyphs are drawn at this size; the numbers below are at 1. */
-const GLYPH_SCALE = 1.12;
+const GLYPH_SCALE = 1.25;
 
 function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   const R = R0 * GLYPH_SCALE;
