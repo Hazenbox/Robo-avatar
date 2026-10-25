@@ -60,13 +60,10 @@ const S = {
   scale: 0.84,
   /** The shell: half its width; above and below the middle, how far it reaches and how square it is. */
   w: 1.255,
-  top: 0.92,
-  bottom: 0.97,
+  top: 0.94,
+  bottom: 0.94,
   nTop: 2.3,
   nSide: 2.6,
-  /** The chin's corners: how far in along the base, and how far up the side, each one turns. */
-  chinX: 0.5,
-  chinY: 0.44,
   /**
    * The glass: half its size, and its drop below the shell's middle. It is a
    * superellipse of power 3: every side bows out, no edge is straight.
@@ -166,7 +163,7 @@ function blob(cx: number, cy: number, hw: number, up: number, down: number, nUp:
     const c = Math.cos(t);
     const s = Math.sin(t);
     const n = s < 0 ? nUp : nDown;
-    const nx = s < 0 && nSide ? nSide : n;
+    const nx = nSide || n;
     const X = cx + Math.sign(c) * Math.pow(Math.abs(c), 2 / nx) * hw;
     const Y = cy + Math.sign(s) * Math.pow(Math.abs(s), 2 / n) * (s < 0 ? up : down);
     if (i === 0) p.moveTo(X, Y);
@@ -193,34 +190,11 @@ function roundRect(cx: number, cy: number, hw: number, hh: number, r: number): P
 }
 
 /**
- * The shell's outline. The top half is a dome (a superellipse); the bottom
- * half is a broad chin: sides that drop nearly straight, a full corner, and
- * a flat base with the slightest bow.
+ * The shell's outline: one superellipse, the same above and below the middle
+ * and the same left and right, so the head is symmetric both ways.
  */
 function shellPath(R: number): Path2D {
-  const p = new Path2D();
-  const W = S.w * R;
-  const B = S.bottom * R;
-  const rx = S.chinX * R;
-  const ry = S.chinY * R;
-  // A corner a touch softer than an ellipse's quarter where it meets the side.
-  const k = 0.52;
-  const steps = 72;
-  for (let i = 0; i <= steps; i++) {
-    const t = (-Math.PI * i) / steps;
-    const c = Math.cos(t);
-    const sn = Math.sin(t);
-    const X = Math.sign(c) * Math.pow(Math.abs(c), 2 / S.nSide) * W;
-    const Y = -Math.pow(Math.abs(sn), 2 / S.nTop) * S.top * R;
-    if (i === 0) p.moveTo(X, Y);
-    else p.lineTo(X, Y);
-  }
-  p.lineTo(-W * 0.995, B - ry);
-  p.bezierCurveTo(-W * 0.995, B - ry * (1 - k), -W + rx * (1 - k), B, -W + rx, B);
-  p.quadraticCurveTo(0, B + 0.012 * R, W - rx, B);
-  p.bezierCurveTo(W - rx * (1 - k), B, W * 0.995, B - ry * (1 - k), W * 0.995, B - ry);
-  p.closePath();
-  return p;
+  return blob(0, 0, S.w * R, S.top * R, S.bottom * R, S.nTop, S.nTop, S.nSide);
 }
 
 /** The screen's outline, grown by `d` all round (negative to shrink); a little rounder as it grows. */
