@@ -1,0 +1,43 @@
+{
+  "name": "robo-avatar",
+  "version": "0.1.0",
+  "description": "A tiny animated robot mascot, drawn entirely in Canvas 2D and WebGL2: no images, no Lottie. Nine states, four emotes, wearables, fur and a playground.",
+  "keywords": ["mascot", "avatar", "robot", "canvas", "webgl", "animation", "react"],
+  "license": "MIT",
+  "type": "module",
+  "repository": { "type": "git", "url": "git+https://github.com/Hazenbox/Robo-avatar.git" },
+  "bugs": { "url": "https://github.com/Hazenbox/Robo-avatar/issues" },
+  "homepage": "https://github.com/Hazenbox/Robo-avatar#readme",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./react": { "types": "./dist/react.d.ts", "import": "./dist/react.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "LICENSE", "NOTICE", "README.md"],
+  "scripts": {
+    "dev": "vite --config playground/vite.config.ts",
+    "build": "tsup",
+    "build:playground": "vite build --config playground/vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test && npm run build && npm run build:playground",
+    "prepublishOnly": "npm run check"
+  },
+  "peerDependencies": { "react": ">=18" },
+  "peerDependenciesMeta": { "react": { "optional": true } },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}

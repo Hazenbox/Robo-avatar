@@ -1,0 +1,10 @@
+Robo avatar
+Copyright (c) 2026 Upen Krishnan. MIT licensed (see LICENSE).
+
+The animation technique (one state table driving a soft body, eyes and
+add-ons, drawn in Canvas 2D) follows coucou's Mochi engine, which is MIT
+licensed. This project is a separate implementation; no images or assets are
+taken from it.
+
+TODO before publishing: add coucou's repository URL and its copyright line
+here, exactly as its own LICENSE gives them.
