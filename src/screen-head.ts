@@ -65,13 +65,25 @@ const S = {
   nTop: 2.3,
   nBottom: 5,
   nSide: 2.6,
-  /** The glass: half its size, how square its corners are, and its drop below the shell's middle. */
-  sw: 1.035,
-  sh: 0.69,
-  sn: 4,
-  sy: 0.063,
-  /** The rim light's line, in from the glass's edge. */
-  rimIn: 0.068,
+  /**
+   * The glass: half its size, and its drop below the shell's middle. It is a
+   * superellipse of power 3: every side bows out, no edge is straight.
+   */
+  sw: 1.057,
+  sh: 0.693,
+  sn: 3,
+  sy: 0.06,
+  /**
+   * The rim light's line: a slightly squarer superellipse (3.3), half its
+   * size, and where its middle sits from the glass's. It is about 0.1 in from
+   * the glass at the top and sides but hugs the bottom (0.04), as the light
+   * sits on the glass's inner bevel, seen from a touch above.
+   */
+  rw: 0.966,
+  rh: 0.623,
+  rn: 3.3,
+  rdx: 0.0075,
+  rdy: 0.0285,
   /** How far the screen travels across the front as it turns. */
   depth: 0.5,
   /** The turn, in radians at yaw / pitch = ±1: a box can't turn as far as a ball. */
@@ -89,7 +101,7 @@ const S = {
   hornTip: -1.235,
   /** Eye centres, either side of the screen's middle, and below it. */
   eyeX: 0.39,
-  eyeY: 0.08,
+  eyeY: 0.1,
 };
 
 /** Its lowest point, for the floor shadow. */
@@ -101,28 +113,36 @@ const EDGE_SHADE: RGB = [150, 140, 160];
 const SIDE_SHADE: RGB = [178, 170, 206];
 
 /**
- * The rim's light, clockwise from the right-hand side: blue down the right,
- * light blue and cyan along the bottom into green, yellow and orange up the
- * left, red at the top-left corner, orange to yellow across the top, and
- * cyan again at the top-right corner.
+ * The rim's light, by angle from the screen's centre, clockwise from the
+ * right-hand side (read off the front view, landmark by landmark): light
+ * blue at the right, deep blue down the lower right and round the corner,
+ * cyan then green then yellow-green along the bottom, yellow at the
+ * bottom-left corner, orange up the lower left, red-orange to red on the
+ * upper left and the top-left corner, orange across the top warming to
+ * yellow, a pale glint where it turns abruptly cyan near the top-right
+ * corner, and cyan down into light blue again.
  */
 const RIM: [number, RGB][] = [
-  [0, [70, 168, 255]],
-  [0.08, [62, 112, 255]],
-  [0.17, [84, 188, 255]],
-  [0.25, [70, 222, 222]],
-  [0.31, [112, 226, 118]],
-  [0.37, [204, 228, 70]],
-  [0.42, [255, 206, 60]],
-  [0.47, [255, 150, 50]],
-  [0.55, [255, 92, 82]],
-  [0.62, [255, 78, 92]],
-  [0.7, [255, 128, 60]],
-  [0.76, [255, 166, 50]],
-  [0.82, [255, 192, 72]],
-  [0.87, [118, 220, 240]],
-  [0.93, [72, 190, 255]],
-  [1, [70, 168, 255]],
+  [0, [100, 200, 255]],
+  [0.064, [64, 112, 242]],
+  [0.1, [70, 118, 255]],
+  [0.136, [64, 198, 242]],
+  [0.237, [82, 220, 200]],
+  [0.323, [112, 226, 112]],
+  [0.38, [200, 226, 64]],
+  [0.415, [255, 210, 52]],
+  [0.459, [255, 150, 42]],
+  [0.5, [255, 112, 52]],
+  [0.548, [255, 82, 72]],
+  [0.6, [255, 80, 92]],
+  [0.635, [255, 96, 72]],
+  [0.704, [255, 140, 50]],
+  [0.822, [255, 186, 62]],
+  [0.85, [255, 214, 120]],
+  [0.864, [210, 242, 244]],
+  [0.885, [86, 222, 250]],
+  [0.95, [90, 210, 255]],
+  [1, [100, 200, 255]],
 ];
 
 const GLYPH: RGB = [255, 255, 255];
@@ -168,6 +188,12 @@ function roundRect(cx: number, cy: number, hw: number, hh: number, r: number): P
   p.arcTo(x0, y0, x1, y0, rr);
   p.closePath();
   return p;
+}
+
+/** The screen's outline, grown by `d` all round (negative to shrink); a little rounder as it grows. */
+function screenPath(fx: number, fy: number, hw: number, hh: number, d: number): Path2D {
+  const n = S.sn - Math.min(0.4, d * 4);
+  return blob(fx, fy, hw + d, hh + d, hh + d, n, n);
 }
 
 function radialAt(
@@ -251,8 +277,8 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
   const fy = (S.sy + Math.sin(b) * 0.45) * R;
   const hw = S.sw * R * ca;
   const hh = S.sh * R * cb;
-  const glass = blob(fx, fy, hw, hh, hh, S.sn, S.sn);
-  drawScreen(x, R, glass, fx, fy, hw, hh);
+  const glass = screenPath(fx, fy, hw, hh, 0);
+  drawScreen(x, R, glass, fx, fy, hw, hh, ca, cb);
 
   x.save();
   x.clip(glass);
@@ -422,13 +448,13 @@ function drawNearEarFace(x: Ctx, R: number, s: number, a: number, cb: number) {
   x.restore();
 }
 
-function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw: number, hh: number) {
+function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw: number, hh: number, ca: number, cb: number) {
   // The screen sits down in a recess. The shell slopes softly in toward it,
   // shaded under the brow at the top and catching light along the bottom;
   // at the bottom of the slope, a thin taupe gap before the glass.
-  const gap = 0.04 * R;
-  const recess = blob(fx, fy, hw + gap, hh + gap, hh + gap, S.sn - 0.3, S.sn - 0.3);
-  const slope = blob(fx, fy, hw + 0.07 * R, hh + 0.07 * R, hh + 0.07 * R, S.sn - 0.4, S.sn - 0.4);
+  const gap = 0.022 * R;
+  const recess = screenPath(fx, fy, hw, hh, gap);
+  const slope = screenPath(fx, fy, hw, hh, 0.06 * R);
   const k = pxScale(x);
   if (canBlur(x)) {
     x.save();
@@ -459,9 +485,9 @@ function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw
     x.stroke(slope);
   }
   const rg = x.createLinearGradient(0, fy - hh - gap, 0, fy + hh + gap);
-  rg.addColorStop(0, "rgb(126,116,114)");
-  rg.addColorStop(0.5, "rgb(150,140,136)");
-  rg.addColorStop(1, "rgb(176,168,162)");
+  rg.addColorStop(0, "rgb(110,100,98)");
+  rg.addColorStop(0.55, "rgb(160,150,146)");
+  rg.addColorStop(1, "rgb(222,216,208)");
   x.fillStyle = rg;
   x.fill(recess);
 
@@ -476,12 +502,14 @@ function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw
   x.save();
   x.clip(glass);
   // The rim light: a saturated neon line just inside the glass's edge, blooming inward.
-  const rim = blob(fx, fy, hw - S.rimIn * R, hh - S.rimIn * R, hh - S.rimIn * R, S.sn, S.sn);
-  x.strokeStyle = rimStyle(x, fx, fy, hw);
+  const rx = fx + S.rdx * R * ca;
+  const ry = fy + S.rdy * R * cb;
+  const rim = blob(rx, ry, S.rw * R * ca, S.rh * R * cb, S.rh * R * cb, S.rn, S.rn);
+  x.strokeStyle = rimStyle(x, rx, ry, hw);
   if (canBlur(x)) {
     // A true bloom: the line, blurred wide and then tight, under the crisp line.
     const k = pxScale(x);
-    for (const [w, blur, al] of [[0.18, 0.12, 0.65], [0.09, 0.035, 0.9]] as const) {
+    for (const [w, blur, al] of [[0.12, 0.07, 0.45], [0.075, 0.025, 0.85]] as const) {
       x.filter = `blur(${blur * R * k}px)`;
       x.globalAlpha = al;
       x.lineWidth = w * R;
@@ -489,7 +517,7 @@ function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw
     }
     x.filter = "none";
     x.globalAlpha = 1;
-    x.lineWidth = 0.052 * R;
+    x.lineWidth = 0.046 * R;
     x.stroke(rim);
   } else {
     for (const [w, al] of [[0.34, 0.07], [0.2, 0.12], [0.11, 0.26], [0.066, 0.6], [0.044, 1]] as const) {
@@ -498,22 +526,28 @@ function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw
       x.stroke(rim);
     }
   }
-  x.globalAlpha = 0.35;
-  x.lineWidth = 0.01 * R;
+  x.globalAlpha = 0.18;
+  x.lineWidth = 0.014 * R;
   x.strokeStyle = "rgb(255,255,255)";
   x.stroke(rim);
   x.globalAlpha = 1;
-  // Convex glass: a broad, faint sheen across the top.
+  // Convex glass: a broad, faint sheen across the top, and the window's soft
+  // reflection up in the top-right corner.
   x.fillStyle = radialAt(x, fx - hw * 0.15, fy - hh * 1.25, hw * 1.05, [
     [0, [255, 255, 255]],
     [1, [255, 255, 255]],
-  ], [0.11, 0]);
+  ], [0.08, 0]);
+  x.fill(glass);
+  x.fillStyle = radialAt(x, fx + hw * 0.58, fy - hh * 0.62, hw * 0.32, [
+    [0, [235, 240, 248]],
+    [1, [235, 240, 248]],
+  ], [0.16, 0]);
   x.fill(glass);
   x.restore();
 
-  // Its own edge: a thin dark bevel where the glass meets the gap.
-  x.lineWidth = 0.012 * R;
-  x.strokeStyle = "rgba(0,0,0,0.75)";
+  // Its own edge: the faintest dark bevel where the glass meets the gap.
+  x.lineWidth = 0.006 * R;
+  x.strokeStyle = "rgba(0,0,0,0.4)";
   x.stroke(glass);
 }
 
@@ -538,6 +572,8 @@ const GLYPH_SCALE = 1.25;
 
 function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   const R = R0 * GLYPH_SCALE;
+  // Light on glass has soft edges, never a vector-crisp one.
+  if (canBlur(x)) x.filter = `blur(${0.006 * R * pxScale(x)}px)`;
   light(x, R);
   for (const sd of [-1, 1]) {
     x.save();
@@ -546,6 +582,7 @@ function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
     x.restore();
   }
   drawMouth(x, R0, p);
+  if (canBlur(x)) x.filter = "none";
 }
 
 function oval(x: Ctx, R: number, rx: number, ry: number, dy = 0) {
@@ -581,7 +618,7 @@ function drawEye(x: Ctx, R: number, g: ScreenGlyph, sd: number, p: ScreenPose) {
   switch (g) {
     case "pill":
       // Curious: fat, nearly round ovals.
-      oval(x, R, 0.14 * p.es, 0.168 * p.es * open);
+      oval(x, R, 0.146 * p.es, 0.173 * p.es * open);
       break;
     case "wide":
       // Surprised: the same width, taller.
