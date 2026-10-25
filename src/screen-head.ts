@@ -1,7 +1,7 @@
 /**
  * The screen head: a chubby cream helmet with a black glass screen for a
  * face, a rainbow light running round the inside of the screen's rim, a
- * little yellow fin on top, and dark ear pads with a cyan light down each side.
+ * little orange horn on top, and dark ear pads with a cyan light down each side.
  *
  * Its expressions are white light on the glass rather than ink, each drawn to
  * the reference sheet: fat ovals when curious, taller ones when surprised,
@@ -9,10 +9,16 @@
  * when sad, a raised brow when thinking, a question mark when confused, and
  * coral crosses on an error.
  *
+ * The proportions are measured from the front view of the reference: a shell
+ * about 1.36 times as wide as it is tall, domed on top and nearly flat
+ * underneath; a squircle screen about 1.5 times as wide as tall sitting a
+ * little low; the rim light a hair inside the glass's edge. Its volume comes
+ * from light rather than outlines: soft inner shade round the shell's edge,
+ * a broad top light, a recess the screen sits down in, a glossy convex glass.
+ *
  * It turns as a rounded box does: the screen slides across the front and
- * narrows, the side swinging toward us shows its cool shade and its ear
- * light, and the fin leans the way the face points. Everything is in R, as
- * in robo.
+ * narrows, the side swinging toward us shows its ear and the ear's light,
+ * and the horn leans the way the face points. Everything is in R, as in robo.
  */
 
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -47,93 +53,104 @@ const TAU = Math.PI * 2;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const rgba = (c: RGB, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp(a, 0, 1)})`;
 
-// ── Geometry (in R) ──────────────────────────────────────────────────────────
+// ── Geometry (in R; measured off the front view, where R is 85 px) ───────────
 
 const S = {
-  /** The shell: a squircle, a little wider than tall, with a domed top. */
-  w: 1.06,
-  h: 0.94,
-  n: 2.8,
-  /** The screen's half size, corner radius and drop below centre. */
-  sw: 0.88,
-  sh: 0.66,
-  sr: 0.35,
-  sy: 0.07,
+  /** The whole head is drawn at this size, so it takes about the room the ball does. */
+  scale: 0.84,
+  /** The shell: half its width; above and below the middle, how far it reaches and how square it is. */
+  w: 1.255,
+  top: 0.92,
+  bottom: 0.9,
+  nTop: 2.3,
+  nBottom: 5,
+  nSide: 2.6,
+  /** The glass: half its size, how square its corners are, and its drop below the shell's middle. */
+  sw: 1.035,
+  sh: 0.69,
+  sn: 4,
+  sy: 0.063,
+  /** The rim light's line, in from the glass's edge. */
+  rimIn: 0.068,
   /** How far the screen travels across the front as it turns. */
-  depth: 0.62,
+  depth: 0.5,
   /** The turn, in radians at yaw / pitch = ±1: a box can't turn as far as a ball. */
-  maxYaw: 0.36,
-  maxPitch: 0.26,
-  /** Ear pads: centre out from the middle, thickness, depth when side-on, height. */
-  earX: 1.1,
-  earT: 0.14,
-  earD: 0.3,
-  earH: 0.74,
-  /** Eye centres, either side of the screen's middle. */
-  eyeX: 0.36,
-  eyeY: 0.02,
+  maxYaw: 0.3,
+  maxPitch: 0.22,
+  /** Ear pads: centre out from the middle, how far they stand proud of the shell, their face side-on, height, drop. */
+  earX: 1.31,
+  earT: 0.3,
+  earD: 0.66,
+  earH: 0.76,
+  earY: 0.137,
+  /** The horn: base half-width, top half-width, top. */
+  hornBase: 0.19,
+  hornTop: 0.115,
+  hornTip: -1.235,
+  /** Eye centres, either side of the screen's middle, and below it. */
+  eyeX: 0.39,
+  eyeY: 0.08,
 };
 
 /** Its lowest point, for the floor shadow. */
-export const SCREEN_HEAD_BOTTOM = S.h;
+export const SCREEN_HEAD_BOTTOM = S.bottom * S.scale;
 
-const SHELL_STOPS: [number, RGB][] = [
-  [0, [255, 254, 250]],
-  [0.35, [248, 245, 239]],
-  [0.62, [234, 230, 223]],
-  [0.86, [210, 205, 199]],
-  [1, [186, 181, 178]],
-];
-/** The side of the shell is in cool shade: a soft lavender grey. */
+const CREAM: RGB = [246, 243, 238];
+/** The shell's edges turn away into a cool, faintly lavender shade. */
+const EDGE_SHADE: RGB = [150, 140, 160];
 const SIDE_SHADE: RGB = [178, 170, 206];
 
 /**
- * The rim's light, clockwise from the right-hand side: cyan and blue down the
- * right, through green and yellow along the bottom, red up the left, orange
- * across the top (a little dimmer in the middle), a pale glint at top right.
+ * The rim's light, clockwise from the right-hand side: blue down the right,
+ * light blue and cyan along the bottom into green, yellow and orange up the
+ * left, red at the top-left corner, orange to yellow across the top, and
+ * cyan again at the top-right corner.
  */
-const RIM: [number, RGB, number][] = [
-  [0, [70, 182, 255], 1],
-  [0.09, [86, 118, 255], 1],
-  [0.17, [70, 196, 238], 1],
-  [0.24, [106, 222, 128], 1],
-  [0.31, [206, 228, 70], 1],
-  [0.38, [255, 204, 60], 1],
-  [0.44, [255, 140, 48], 1],
-  [0.5, [255, 66, 62], 1],
-  [0.6, [255, 82, 56], 1],
-  [0.68, [255, 128, 42], 1],
-  [0.76, [255, 160, 50], 0.7],
-  [0.84, [255, 214, 120], 0.8],
-  [0.89, [236, 248, 255], 0.9],
-  [0.94, [96, 214, 244], 1],
-  [1, [70, 182, 255], 1],
+const RIM: [number, RGB][] = [
+  [0, [70, 168, 255]],
+  [0.08, [62, 112, 255]],
+  [0.17, [84, 188, 255]],
+  [0.25, [70, 222, 222]],
+  [0.31, [112, 226, 118]],
+  [0.37, [204, 228, 70]],
+  [0.42, [255, 206, 60]],
+  [0.47, [255, 150, 50]],
+  [0.55, [255, 92, 82]],
+  [0.62, [255, 78, 92]],
+  [0.7, [255, 128, 60]],
+  [0.76, [255, 166, 50]],
+  [0.82, [255, 192, 72]],
+  [0.87, [118, 220, 240]],
+  [0.93, [72, 190, 255]],
+  [1, [70, 168, 255]],
 ];
 
 const GLYPH: RGB = [255, 255, 255];
-const BLOOM: RGB = [220, 236, 255];
+const BLOOM: RGB = [225, 238, 255];
 const CORAL: RGB = [242, 92, 92];
 const LED: RGB = [104, 230, 255];
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
-let shellCache: { R: number; path: Path2D } | null = null;
-
-function shellPath(R: number): Path2D {
-  if (shellCache?.R === R) return shellCache.path;
+/**
+ * A superellipse with its own reach and squareness above and below the
+ * middle: the shell's domed top and flat bottom, or (all equal) a squircle.
+ */
+function blob(cx: number, cy: number, hw: number, up: number, down: number, nUp: number, nDown: number, nSide = 0): Path2D {
   const p = new Path2D();
-  const e = 2 / S.n;
-  for (let i = 0; i <= 120; i++) {
-    const t = (i / 120) * TAU;
+  const steps = 128;
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * TAU;
     const c = Math.cos(t);
     const s = Math.sin(t);
-    const X = Math.sign(c) * Math.pow(Math.abs(c), e) * S.w * R;
-    const Y = Math.sign(s) * Math.pow(Math.abs(s), e) * S.h * R;
+    const n = s < 0 ? nUp : nDown;
+    const nx = nSide || n;
+    const X = cx + Math.sign(c) * Math.pow(Math.abs(c), 2 / nx) * hw;
+    const Y = cy + Math.sign(s) * Math.pow(Math.abs(s), 2 / n) * (s < 0 ? up : down);
     if (i === 0) p.moveTo(X, Y);
     else p.lineTo(X, Y);
   }
   p.closePath();
-  shellCache = { R, path: p };
   return p;
 }
 
@@ -161,25 +178,57 @@ function radialAt(
   return g;
 }
 
+/** Whether the context can blur what it draws (not every browser's canvas can). */
+function canBlur(x: Ctx): boolean {
+  return "filter" in x && typeof x.filter === "string";
+}
+
+/** Device pixels per unit of the current transform: shadows are measured in device pixels. */
+function pxScale(x: Ctx): number {
+  const m = x.getTransform();
+  return Math.hypot(m.a, m.b) || 1;
+}
+
+/**
+ * Soft shade just inside a shape's edge, as a rounded thing turning away
+ * from us has: the shadow of everything outside the shape, cast in by `dy`.
+ */
+function innerShade(x: Ctx, shape: Path2D, R: number, color: string, blur: number, dy: number) {
+  const k = pxScale(x);
+  x.save();
+  x.clip(shape);
+  const hole = new Path2D();
+  hole.rect(-6 * R, -6 * R, 12 * R, 12 * R);
+  hole.addPath(shape);
+  x.shadowColor = color;
+  x.shadowBlur = blur * R * k;
+  x.shadowOffsetX = 0;
+  x.shadowOffsetY = dy * R * k;
+  x.fillStyle = "#000";
+  x.fill(hole, "evenodd");
+  x.restore();
+}
+
 function rimStyle(x: Ctx, cx: number, cy: number, hw: number): CanvasGradient {
   if ("createConicGradient" in x && typeof x.createConicGradient === "function") {
     const g = x.createConicGradient(0, cx, cy);
-    for (const [o, c, a] of RIM) g.addColorStop(o, rgba(c, a));
+    for (const [o, c] of RIM) g.addColorStop(o, rgba(c));
     return g;
   }
   // Without conic gradients: warm on the left, cool on the right.
   const g = x.createLinearGradient(cx - hw, 0, cx + hw, 0);
-  g.addColorStop(0, rgba([255, 66, 62]));
-  g.addColorStop(0.35, rgba([255, 160, 50]));
-  g.addColorStop(0.65, rgba([106, 222, 128]));
-  g.addColorStop(1, rgba([70, 182, 255]));
+  g.addColorStop(0, rgba([255, 92, 82]));
+  g.addColorStop(0.35, rgba([255, 170, 56]));
+  g.addColorStop(0.65, rgba([112, 226, 118]));
+  g.addColorStop(1, rgba([70, 168, 255]));
   return g;
 }
 
 // ── Draw ─────────────────────────────────────────────────────────────────────
 
 /** Draws the whole head centred on the current origin, with radius R. */
-export function drawScreenHead(x: Ctx, R: number, p: ScreenPose) {
+export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
+  const R = R0 * S.scale;
   const a = p.yaw * S.maxYaw;
   const b = p.pitch * S.maxPitch;
   const ca = Math.cos(a);
@@ -189,23 +238,24 @@ export function drawScreenHead(x: Ctx, R: number, p: ScreenPose) {
   x.save();
   x.rotate(p.tilt * 0.6);
 
-  // The side swinging toward us; the far ear is behind the shell, the fin's root inside it.
+  // The side swinging toward us. Both ears and the horn's root sit behind the shell's edge.
   const near = sa > 0 ? -1 : 1;
   drawEar(x, R, -near, a, cb, false);
-  drawFin(x, R, sa);
-  drawShell(x, R, p.color, sa, near);
   drawEar(x, R, near, a, cb, true);
+  drawHorn(x, R, sa);
+  drawShell(x, R, p.color, sa, near);
+  drawNearEarFace(x, R, near, a, cb);
 
   // The screen rides on the front.
   const fx = sa * S.depth * R;
-  const fy = (S.sy + Math.sin(b) * 0.5) * R;
+  const fy = (S.sy + Math.sin(b) * 0.45) * R;
   const hw = S.sw * R * ca;
   const hh = S.sh * R * cb;
-  const sr = S.sr * R * Math.min(ca, cb);
-  drawScreen(x, R, fx, fy, hw, hh, sr);
+  const glass = blob(fx, fy, hw, hh, hh, S.sn, S.sn);
+  drawScreen(x, R, glass, fx, fy, hw, hh);
 
   x.save();
-  x.clip(roundRect(fx, fy, hw, hh, sr));
+  x.clip(glass);
   // The face looks a touch further than the head turns, so it reads as a glance.
   x.translate(fx + p.yaw * 0.05 * R, fy + (S.eyeY + p.pitch * 0.04) * R);
   x.scale(ca, cb);
@@ -217,173 +267,254 @@ export function drawScreenHead(x: Ctx, R: number, p: ScreenPose) {
 }
 
 function drawShell(x: Ctx, R: number, color: RGB | null, sa: number, near: number) {
-  const shell = shellPath(R);
-  x.fillStyle = radialAt(x, -0.3 * R, -0.52 * R, 1.8 * R, SHELL_STOPS);
+  const shell = blob(0, 0, S.w * R, S.top * R, S.bottom * R, S.nTop, S.nBottom, S.nSide);
+  x.fillStyle = rgba(CREAM);
   x.fill(shell);
 
+  // Light from above and a little left: a broad bright crown, falling off down the sides.
   x.save();
   x.clip(shell);
-  // Soft shade underneath.
-  const ao = x.createLinearGradient(0, 0.25 * R, 0, S.h * R);
-  ao.addColorStop(0, "rgba(90,78,70,0)");
-  ao.addColorStop(1, "rgba(90,78,70,0.16)");
-  x.fillStyle = ao;
-  x.fillRect(-1.3 * R, 0, 2.6 * R, R);
-  // Both edges roll away from the light, always a little; the near side,
-  // swinging round to face us, shows a band of cool lavender shade.
+  const fall = x.createLinearGradient(0, -S.top * R, 0, S.bottom * R);
+  fall.addColorStop(0, "rgba(255,255,255,0.55)");
+  fall.addColorStop(0.35, "rgba(255,255,255,0.1)");
+  fall.addColorStop(0.7, "rgba(120,104,96,0.03)");
+  fall.addColorStop(1, "rgba(110,96,90,0.16)");
+  x.fillStyle = fall;
+  x.fill(shell);
+  // The near side, turning toward us, picks up a cool lavender cast.
   const k = Math.abs(sa) / Math.sin(S.maxYaw);
-  for (const side of [-1, 1]) {
-    const reach = side === near ? 0.3 + 0.35 * k : 0.28;
-    const alpha = side === near ? 0.32 + 0.45 * k : 0.3;
-    const g = x.createLinearGradient(side * S.w * R, 0, side * (S.w - reach) * R, 0);
-    g.addColorStop(0, rgba(SIDE_SHADE, alpha));
+  if (k > 0.01) {
+    const g = x.createLinearGradient(near * S.w * R, 0, near * (S.w - 0.7) * R, 0);
+    g.addColorStop(0, rgba(SIDE_SHADE, 0.55 * k));
     g.addColorStop(1, rgba(SIDE_SHADE, 0));
     x.fillStyle = g;
-    x.fillRect(-1.3 * R, -R, 2.6 * R, 2 * R);
+    x.fill(shell);
   }
+  x.restore();
+
+  // Every edge rolls away from us into shade: wide and faint, then tight and darker.
+  innerShade(x, shell, R, rgba(EDGE_SHADE, 0.42), 0.36, -0.06);
+  innerShade(x, shell, R, rgba([120, 108, 112], 0.45), 0.1, -0.02);
+  // The crown catches the light: a soft highlight just inside the top edge.
+  x.save();
+  x.clip(shell);
+  x.fillStyle = radialAt(x, -0.1 * R, -0.78 * R, 0.95 * R, [
+    [0, [255, 255, 255]],
+    [1, [255, 255, 255]],
+  ], [0.75, 0]);
+  x.save();
+  x.scale(1, 0.4);
+  x.fillRect(-1.5 * R, -2.6 * R, 3 * R, 2.6 * R);
+  x.restore();
+  // Bounced light from below, along the bottom edge.
+  const bounce = x.createLinearGradient(0, S.bottom * R, 0, (S.bottom - 0.12) * R);
+  bounce.addColorStop(0, "rgba(255,248,240,0.35)");
+  bounce.addColorStop(1, "rgba(255,248,240,0)");
+  x.fillStyle = bounce;
+  x.fill(shell);
+  x.restore();
 
   if (color) {
+    x.save();
+    x.clip(shell);
     x.globalCompositeOperation = "multiply";
     x.fillStyle = rgba(color);
     x.fill(shell);
-    x.globalCompositeOperation = "source-over";
+    x.restore();
   }
-  // A broad, soft sheen across the top: matte plastic, not gloss.
-  x.fillStyle = radialAt(x, -0.25 * R, -0.7 * R, 0.75 * R, [
-    [0, [255, 255, 255]],
-    [1, [255, 255, 255]],
-  ], [0.6, 0]);
-  x.fillRect(-1.3 * R, -R, 2.6 * R, 2 * R);
-  x.restore();
-
-  // A faint edge, so a cream head reads on a white page.
-  x.lineWidth = 0.01 * R;
-  x.strokeStyle = "rgba(110,100,110,0.16)";
-  x.stroke(shell);
 }
 
-/** The fin on top: a rounded, fat little fin whose tip leans the way the face points. */
-function drawFin(x: Ctx, R: number, sa: number) {
-  const k = sa / Math.sin(S.maxYaw);
-  const tip = 0.2 * k;
-  // It sits a little forward on the crown, so it moves toward the face as the head turns.
-  x.save();
-  x.translate(0.16 * k * R, 0);
-  const u = (v: number) => v * R;
+/** The horn: a soft orange stub, a rounded top, its root in the shell; it leans the way the face points. */
+function drawHorn(x: Ctx, R: number, sa: number) {
+  const lean = (sa / Math.sin(S.maxYaw)) * 0.12 * R;
+  const bw = S.hornBase * R;
+  const tw = S.hornTop * R;
+  const top = S.hornTip * R;
+  const base = -0.8 * R;
+  const capR = tw * 0.95;
   const p = new Path2D();
-  p.moveTo(u(-0.21), u(-0.8));
-  // The back edge rises gently, the front edge is steeper, the top is round.
-  p.bezierCurveTo(u(-0.21), u(-0.96), u(tip - 0.12), u(-1.09), u(tip - 0.03), u(-1.13));
-  p.bezierCurveTo(u(tip + 0.04), u(-1.16), u(tip + 0.12), u(-1.15), u(tip + 0.13), u(-1.08));
-  p.bezierCurveTo(u(tip + 0.14), u(-1.0), u(0.19), u(-0.94), u(0.19), u(-0.8));
+  p.moveTo(-bw, base);
+  p.bezierCurveTo(-bw, base - 0.12 * R, lean - tw, top + capR + 0.08 * R, lean - tw, top + capR);
+  p.bezierCurveTo(lean - tw, top - 0.005 * R, lean + tw, top - 0.005 * R, lean + tw, top + capR);
+  p.bezierCurveTo(lean + tw, top + capR + 0.08 * R, bw, base - 0.12 * R, bw, base);
   p.closePath();
-  const g = x.createLinearGradient(0, u(-1.12), u(0.08), u(-0.82));
-  g.addColorStop(0, "rgb(255,232,120)");
-  g.addColorStop(0.5, "rgb(255,210,64)");
-  g.addColorStop(1, "rgb(246,176,42)");
+  // Round, so shaded across: lit on the left, deeper orange on the right.
+  const g = x.createLinearGradient(-bw, 0, bw + lean, 0);
+  g.addColorStop(0, "rgb(255,186,64)");
+  g.addColorStop(0.45, "rgb(255,160,38)");
+  g.addColorStop(1, "rgb(232,122,22)");
   x.fillStyle = g;
   x.fill(p);
   x.save();
   x.clip(p);
-  x.fillStyle = radialAt(x, u(tip - 0.06), u(-1.03), u(0.11), [
-    [0, [255, 248, 210]],
-    [1, [255, 248, 210]],
-  ], [0.85, 0]);
-  x.fillRect(u(-0.4), u(-1.3), u(0.8), u(0.6));
-  x.restore();
+  // Its top catches the light; its root sits in the shell's shadow.
+  x.fillStyle = radialAt(x, lean - tw * 0.2, top + capR * 0.7, tw * 1.4, [
+    [0, [255, 226, 140]],
+    [1, [255, 226, 140]],
+  ], [0.95, 0]);
+  x.fillRect(-2 * bw, top - R * 0.1, 4 * bw + Math.abs(lean), -top);
+  const root = x.createLinearGradient(0, base - 0.12 * R, 0, base);
+  root.addColorStop(0, "rgba(160,70,10,0)");
+  root.addColorStop(1, "rgba(160,70,10,0.35)");
+  x.fillStyle = root;
+  x.fill(p);
   x.restore();
 }
 
-/** One ear pad; the near one shows its outer face and its light as it turns toward us. */
+/** One ear pad, standing proud of the shell's side; the far one slides behind as the head turns. */
 function drawEar(x: Ctx, R: number, s: number, a: number, cb: number, nearSide: boolean) {
   const ca = Math.cos(a);
   const sa = Math.abs(Math.sin(a));
-  const face = nearSide ? sa : 0;
-  const w = (S.earT * ca + S.earD * face) * R;
+  const cx = s * (S.earX * ca - (nearSide ? 0.25 * sa : 1.1 * sa)) * R;
+  const cy = S.earY * R;
+  const w = S.earT * R;
   const h = S.earH * R * cb;
-  // The far ear swings round behind the shell; the near one in over its side.
-  const cx = s * (S.earX * ca - (nearSide ? 0.32 * face : 0.9 * sa)) * R;
-  const cy = 0.06 * R;
-  const pad = roundRect(cx, cy, w / 2, h / 2, Math.min(w / 2, 0.15 * R));
-  const g = x.createLinearGradient(cx + s * (w / 2), 0, cx - s * (w / 2), 0);
-  g.addColorStop(0, "rgb(24,25,30)");
-  g.addColorStop(0.6, "rgb(42,44,52)");
-  g.addColorStop(1, "rgb(66,69,80)");
+  const pad = roundRect(cx, cy, w / 2, h / 2, 0.14 * R);
+  // Soft rubber: dark charcoal, a cool light along the outer edge, a sheen on top.
+  const g = x.createLinearGradient(cx - s * (w / 2), 0, cx + s * (w / 2), 0);
+  g.addColorStop(0, "rgb(26,27,32)");
+  g.addColorStop(0.45, "rgb(38,40,48)");
+  g.addColorStop(0.8, "rgb(84,92,110)");
+  g.addColorStop(1, "rgb(70,78,96)");
   x.fillStyle = g;
   x.fill(pad);
   x.save();
   x.clip(pad);
-  const top = x.createLinearGradient(0, cy - h / 2, 0, cy);
-  top.addColorStop(0, "rgba(255,255,255,0.16)");
-  top.addColorStop(1, "rgba(255,255,255,0)");
-  x.fillStyle = top;
+  const sheen = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
+  sheen.addColorStop(0, "rgba(255,255,255,0.16)");
+  sheen.addColorStop(0.3, "rgba(255,255,255,0)");
+  sheen.addColorStop(1, "rgba(0,0,0,0.25)");
+  x.fillStyle = sheen;
   x.fill(pad);
   x.restore();
+}
 
-  if (face < 0.03) return;
-  // The light: a cyan pill down the middle of the pad's outer face.
-  const k = clamp(face / 0.3, 0, 1);
-  const lw = 0.07 * R * k;
+/**
+ * The near ear's outer face, turned toward us: a dark pill on the shell's
+ * side with a cyan light down its middle, as in the side view.
+ */
+function drawNearEarFace(x: Ctx, R: number, s: number, a: number, cb: number) {
+  const face = Math.abs(Math.sin(a));
+  if (face < 0.02) return;
+  const ca = Math.cos(a);
+  const w = S.earD * face * R;
+  const h = S.earH * 1.08 * R * cb;
+  const cx = s * (S.w * ca * R - 0.03 * R - w / 2);
+  const cy = S.earY * R;
+  const pad = roundRect(cx, cy, w / 2, h / 2, Math.min(w / 2, 0.2 * R));
+  const g = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
+  g.addColorStop(0, "rgb(52,55,64)");
+  g.addColorStop(1, "rgb(24,25,30)");
+  x.fillStyle = g;
+  x.fill(pad);
+  const k = clamp(face / Math.sin(S.maxYaw), 0, 1);
+  const lw = Math.max(0.01 * R, w * 0.3);
   const lh = h * 0.62;
   x.save();
-  x.shadowColor = rgba(LED, 0.9);
-  x.shadowBlur = 0.14 * R;
-  x.fillStyle = rgba(LED, 0.95);
+  x.globalAlpha = k;
+  x.shadowColor = rgba(LED, 0.95);
+  x.shadowBlur = 0.12 * R * pxScale(x);
+  x.fillStyle = rgba(LED);
   x.fill(roundRect(cx, cy, lw / 2, lh / 2, lw / 2));
   x.shadowBlur = 0;
-  x.fillStyle = "rgba(232,252,255,0.9)";
+  x.fillStyle = "rgba(236,253,255,0.9)";
   x.fill(roundRect(cx, cy, lw / 5, lh / 2 - lw / 3, lw / 5));
   x.restore();
 }
 
-function drawScreen(x: Ctx, R: number, fx: number, fy: number, hw: number, hh: number, sr: number) {
-  // The screen sits in a shallow recess: the shell's lip in shade above, catching light below.
-  const lip = 0.05 * R;
-  const recess = roundRect(fx, fy, hw + lip, hh + lip, sr + lip);
-  const rg = x.createLinearGradient(0, fy - hh - lip, 0, fy + hh + lip);
-  rg.addColorStop(0, "rgba(98,88,96,0.42)");
-  rg.addColorStop(0.5, "rgba(150,140,150,0.2)");
-  rg.addColorStop(1, "rgba(255,255,255,0.8)");
+function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw: number, hh: number) {
+  // The screen sits down in a recess. The shell slopes softly in toward it,
+  // shaded under the brow at the top and catching light along the bottom;
+  // at the bottom of the slope, a thin taupe gap before the glass.
+  const gap = 0.04 * R;
+  const recess = blob(fx, fy, hw + gap, hh + gap, hh + gap, S.sn - 0.3, S.sn - 0.3);
+  const slope = blob(fx, fy, hw + 0.07 * R, hh + 0.07 * R, hh + 0.07 * R, S.sn - 0.4, S.sn - 0.4);
+  const k = pxScale(x);
+  if (canBlur(x)) {
+    x.save();
+    x.filter = `blur(${0.05 * R * k}px)`;
+    const sg = x.createLinearGradient(0, fy - hh, 0, fy + hh);
+    sg.addColorStop(0, "rgba(118,106,104,0.55)");
+    sg.addColorStop(0.6, "rgba(140,128,124,0.35)");
+    sg.addColorStop(1, "rgba(150,140,134,0.2)");
+    x.lineWidth = 0.1 * R;
+    x.strokeStyle = sg;
+    x.stroke(slope);
+    x.filter = `blur(${0.025 * R * k}px)`;
+    const lit = x.createLinearGradient(0, fy, 0, fy + hh + 0.1 * R);
+    lit.addColorStop(0, "rgba(255,255,255,0)");
+    lit.addColorStop(1, "rgba(255,255,255,0.85)");
+    x.lineWidth = 0.03 * R;
+    x.strokeStyle = lit;
+    x.translate(0, 0.03 * R);
+    x.stroke(slope);
+    x.restore();
+  } else {
+    const lg = x.createLinearGradient(0, fy - hh, 0, fy + hh + 2 * gap);
+    lg.addColorStop(0, "rgba(120,108,104,0.35)");
+    lg.addColorStop(0.55, "rgba(255,255,255,0)");
+    lg.addColorStop(1, "rgba(255,255,255,0.7)");
+    x.lineWidth = 0.05 * R;
+    x.strokeStyle = lg;
+    x.stroke(slope);
+  }
+  const rg = x.createLinearGradient(0, fy - hh - gap, 0, fy + hh + gap);
+  rg.addColorStop(0, "rgb(126,116,114)");
+  rg.addColorStop(0.5, "rgb(150,140,136)");
+  rg.addColorStop(1, "rgb(176,168,162)");
   x.fillStyle = rg;
   x.fill(recess);
 
-  const screen = roundRect(fx, fy, hw, hh, sr);
-  const glass = x.createLinearGradient(0, fy - hh, 0, fy + hh);
-  glass.addColorStop(0, "rgb(20,20,24)");
-  glass.addColorStop(0.4, "rgb(7,7,9)");
-  glass.addColorStop(1, "rgb(3,3,4)");
-  x.fillStyle = glass;
-  x.fill(screen);
+  // The glass: deep black, a hair lighter at its edges where it curves away.
+  const gg = x.createRadialGradient(fx, fy - hh * 0.2, 0, fx, fy, hw * 1.05);
+  gg.addColorStop(0, "rgb(4,4,6)");
+  gg.addColorStop(0.75, "rgb(8,8,11)");
+  gg.addColorStop(1, "rgb(26,26,32)");
+  x.fillStyle = gg;
+  x.fill(glass);
 
   x.save();
-  x.clip(screen);
-  // The rim light sits just inside the glass's black edge: a crisp line that
-  // blooms inward and fades into the black.
-  const inset = 0.042 * R;
-  const rim = roundRect(fx, fy, hw - inset, hh - inset, Math.max(0, sr - inset));
+  x.clip(glass);
+  // The rim light: a saturated neon line just inside the glass's edge, blooming inward.
+  const rim = blob(fx, fy, hw - S.rimIn * R, hh - S.rimIn * R, hh - S.rimIn * R, S.sn, S.sn);
   x.strokeStyle = rimStyle(x, fx, fy, hw);
-  for (const [w, al] of [[0.19, 0.1], [0.1, 0.28], [0.06, 0.62], [0.036, 1]] as const) {
-    x.globalAlpha = al;
-    x.lineWidth = w * R;
+  if (canBlur(x)) {
+    // A true bloom: the line, blurred wide and then tight, under the crisp line.
+    const k = pxScale(x);
+    for (const [w, blur, al] of [[0.18, 0.12, 0.65], [0.09, 0.035, 0.9]] as const) {
+      x.filter = `blur(${blur * R * k}px)`;
+      x.globalAlpha = al;
+      x.lineWidth = w * R;
+      x.stroke(rim);
+    }
+    x.filter = "none";
+    x.globalAlpha = 1;
+    x.lineWidth = 0.052 * R;
     x.stroke(rim);
+  } else {
+    for (const [w, al] of [[0.34, 0.07], [0.2, 0.12], [0.11, 0.26], [0.066, 0.6], [0.044, 1]] as const) {
+      x.globalAlpha = al;
+      x.lineWidth = w * R;
+      x.stroke(rim);
+    }
   }
-  // A hot white core keeps the line crisp.
-  x.globalAlpha = 0.4;
-  x.lineWidth = 0.008 * R;
+  x.globalAlpha = 0.35;
+  x.lineWidth = 0.01 * R;
   x.strokeStyle = "rgb(255,255,255)";
   x.stroke(rim);
   x.globalAlpha = 1;
-  // A soft reflection on the glass, high on the left.
-  x.fillStyle = radialAt(x, fx - hw * 0.35, fy - hh * 0.85, hw * 0.95, [
+  // Convex glass: a broad, faint sheen across the top.
+  x.fillStyle = radialAt(x, fx - hw * 0.15, fy - hh * 1.25, hw * 1.05, [
     [0, [255, 255, 255]],
     [1, [255, 255, 255]],
-  ], [0.08, 0]);
-  x.fill(screen);
+  ], [0.11, 0]);
+  x.fill(glass);
   x.restore();
 
+  // Its own edge: a thin dark bevel where the glass meets the gap.
   x.lineWidth = 0.012 * R;
-  x.strokeStyle = "rgba(0,0,0,0.6)";
-  x.stroke(screen);
+  x.strokeStyle = "rgba(0,0,0,0.75)";
+  x.stroke(glass);
 }
 
 // ── The face on the glass ────────────────────────────────────────────────────
@@ -394,8 +525,8 @@ function drawScreen(x: Ctx, R: number, fx: number, fy: number, hw: number, hh: n
 function light(x: Ctx, R: number, c: RGB = GLYPH, glow: RGB = BLOOM) {
   x.fillStyle = rgba(c);
   x.strokeStyle = rgba(c);
-  x.shadowColor = rgba(glow, 0.7);
-  x.shadowBlur = 0.06 * R;
+  x.shadowColor = rgba(glow, 0.85);
+  x.shadowBlur = 0.1 * R * pxScale(x);
   x.lineCap = "round";
   x.lineJoin = "round";
 }
@@ -403,7 +534,7 @@ function light(x: Ctx, R: number, c: RGB = GLYPH, glow: RGB = BLOOM) {
 const STROKE = 0.084;
 
 /** Glyphs are drawn at this size; the numbers below are at 1. */
-const GLYPH_SCALE = 1.1;
+const GLYPH_SCALE = 1.25;
 
 function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   const R = R0 * GLYPH_SCALE;
