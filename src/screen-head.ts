@@ -61,18 +61,20 @@ const S = {
   /** The shell: half its width; above and below the middle, how far it reaches and how square it is. */
   w: 1.255,
   top: 0.92,
-  bottom: 0.93,
+  bottom: 0.97,
   nTop: 2.3,
-  nBottom: 4.6,
   nSide: 2.6,
+  /** The chin's corners: how far in along the base, and how far up the side, each one turns. */
+  chinX: 0.5,
+  chinY: 0.44,
   /**
    * The glass: half its size, and its drop below the shell's middle. It is a
    * superellipse of power 3: every side bows out, no edge is straight.
    */
   sw: 1.057,
-  sh: 0.693,
+  sh: 0.71,
   sn: 3,
-  sy: 0.06,
+  sy: 0.077,
   /**
    * The rim light's line: a slightly squarer superellipse (3.3), half its
    * size, and where its middle sits from the glass's. It is about 0.1 in from
@@ -80,7 +82,7 @@ const S = {
    * sits on the glass's inner bevel, seen from a touch above.
    */
   rw: 0.966,
-  rh: 0.623,
+  rh: 0.64,
   rn: 3.3,
   rdx: 0.0075,
   rdy: 0.0285,
@@ -101,7 +103,7 @@ const S = {
   hornTip: -1.235,
   /** Eye centres, either side of the screen's middle, and below it. */
   eyeX: 0.39,
-  eyeY: 0.1,
+  eyeY: 0.072,
 };
 
 /** Its lowest point, for the floor shadow. */
@@ -186,6 +188,37 @@ function roundRect(cx: number, cy: number, hw: number, hh: number, r: number): P
   p.arcTo(x1, y1, x0, y1, rr);
   p.arcTo(x0, y1, x0, y0, rr);
   p.arcTo(x0, y0, x1, y0, rr);
+  p.closePath();
+  return p;
+}
+
+/**
+ * The shell's outline. The top half is a dome (a superellipse); the bottom
+ * half is a broad chin: sides that drop nearly straight, a full corner, and
+ * a flat base with the slightest bow.
+ */
+function shellPath(R: number): Path2D {
+  const p = new Path2D();
+  const W = S.w * R;
+  const B = S.bottom * R;
+  const rx = S.chinX * R;
+  const ry = S.chinY * R;
+  // A corner a touch softer than an ellipse's quarter where it meets the side.
+  const k = 0.52;
+  const steps = 72;
+  for (let i = 0; i <= steps; i++) {
+    const t = (-Math.PI * i) / steps;
+    const c = Math.cos(t);
+    const sn = Math.sin(t);
+    const X = Math.sign(c) * Math.pow(Math.abs(c), 2 / S.nSide) * W;
+    const Y = -Math.pow(Math.abs(sn), 2 / S.nTop) * S.top * R;
+    if (i === 0) p.moveTo(X, Y);
+    else p.lineTo(X, Y);
+  }
+  p.lineTo(-W * 0.995, B - ry);
+  p.bezierCurveTo(-W * 0.995, B - ry * (1 - k), -W + rx * (1 - k), B, -W + rx, B);
+  p.quadraticCurveTo(0, B + 0.012 * R, W - rx, B);
+  p.bezierCurveTo(W - rx * (1 - k), B, W * 0.995, B - ry * (1 - k), W * 0.995, B - ry);
   p.closePath();
   return p;
 }
@@ -293,7 +326,7 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
 }
 
 function drawShell(x: Ctx, R: number, color: RGB | null, sa: number, near: number) {
-  const shell = blob(0, 0, S.w * R, S.top * R, S.bottom * R, S.nTop, S.nBottom, S.nSide);
+  const shell = shellPath(R);
   x.fillStyle = rgba(CREAM);
   x.fill(shell);
 
@@ -333,10 +366,14 @@ function drawShell(x: Ctx, R: number, color: RGB | null, sa: number, near: numbe
   x.fillRect(-1.5 * R, -2.6 * R, 3 * R, 2.6 * R);
   x.restore();
   // Bounced light from below, along the bottom edge.
-  const bounce = x.createLinearGradient(0, S.bottom * R, 0, (S.bottom - 0.12) * R);
-  bounce.addColorStop(0, "rgba(255,248,240,0.35)");
-  bounce.addColorStop(1, "rgba(255,248,240,0)");
-  x.fillStyle = bounce;
+  // The chin's underside turns away into a warm shade, with bounced light
+  // catching just its very edge.
+  const under = x.createLinearGradient(0, (S.bottom - 0.2) * R, 0, S.bottom * R);
+  under.addColorStop(0, "rgba(150,132,118,0)");
+  under.addColorStop(0.7, "rgba(150,132,118,0.28)");
+  under.addColorStop(0.92, "rgba(150,132,118,0.2)");
+  under.addColorStop(1, "rgba(255,248,240,0.5)");
+  x.fillStyle = under;
   x.fill(shell);
   x.restore();
 
@@ -436,7 +473,11 @@ function drawEar(x: Ctx, R: number, s: number, a: number, cb: number, nearSide: 
  */
 function drawNearEarFace(x: Ctx, R: number, s: number, a: number, cb: number) {
   const face = Math.abs(Math.sin(a));
-  if (face < 0.02) return;
+  // It fades in as the side comes round, so a small turn never shows a sliver.
+  const fade = clamp((face - 0.05) / 0.12, 0, 1);
+  if (fade <= 0) return;
+  x.save();
+  x.globalAlpha = fade;
   const ca = Math.cos(a);
   const w = S.earD * face * R;
   const h = S.earH * 1.08 * R * cb;
@@ -452,7 +493,7 @@ function drawNearEarFace(x: Ctx, R: number, s: number, a: number, cb: number) {
   const lw = Math.max(0.01 * R, w * 0.3);
   const lh = h * 0.62;
   x.save();
-  x.globalAlpha = k;
+  x.globalAlpha = k * fade;
   x.shadowColor = rgba(LED, 0.95);
   x.shadowBlur = 0.12 * R * pxScale(x);
   x.fillStyle = rgba(LED);
@@ -460,6 +501,7 @@ function drawNearEarFace(x: Ctx, R: number, s: number, a: number, cb: number) {
   x.shadowBlur = 0;
   x.fillStyle = "rgba(236,253,255,0.9)";
   x.fill(roundRect(cx, cy, lw / 5, lh / 2 - lw / 3, lw / 5));
+  x.restore();
   x.restore();
 }
 
