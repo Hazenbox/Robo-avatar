@@ -280,11 +280,13 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
 
   // The side swinging toward us. Both ears and the horn's root sit behind the shell's edge.
   const near = sa > 0 ? -1 : 1;
-  drawEar(x, R, -near, a, cb, false);
-  drawEar(x, R, near, a, cb, true);
+  const earL = earGeometry(-1, a);
+  const earR = earGeometry(1, a);
+  drawEarBehind(x, R, earL, cb);
+  drawEarBehind(x, R, earR, cb);
   drawHorn(x, R, sa);
   drawShell(x, R, p.color, sa, near);
-  drawNearEarFace(x, R, near, a, cb);
+  drawEarInFront(x, R, near < 0 ? earL : earR, cb);
 
   // The screen rides on the front.
   const fx = sa * S.depth * R;
@@ -419,37 +421,68 @@ function drawHorn(x: Ctx, R: number, sa: number) {
 }
 
 /**
- * One ear pad seen from the front: a solid, glossy half-capsule standing out
- * from the shell's side, its outer edge a long gentle curve with generous
- * corners. Near black, with a cool navy light across its top, a teal rim down
- * its outer edge, and the ear light showing edge-on as a bright sliver.
+ * Each ear is one solid slab bolted to the side of the head: a wall facing
+ * forward (the half-capsule profile you see from the front, `earT` thick) and
+ * an outer face (the capsule with the light in it, `earD` deep). Turning the
+ * head swings the slab round the head's axis, so the two are always the same
+ * object: from the front you see only the wall; as the head turns, the near
+ * ear's face opens out beside its wall and its wall slides in over the
+ * shell; the far ear's wall drifts out a little and tucks away.
  */
-function drawEar(x: Ctx, R: number, s: number, a: number, cb: number, nearSide: boolean) {
-  const ca = Math.cos(a);
-  const sa = Math.abs(Math.sin(a));
-  // The far ear swings round behind the shell; the near one in over its side.
-  const w = S.earT * R;
-  // As the near ear's face comes round to us, its profile slides in under the
-  // shell (the face capsule is the same ear, seen turned).
-  const slide = nearSide ? earGrow(sa) * w * 0.95 : 0;
-  const out = (S.earOut * ca - (nearSide ? 0.12 * sa : 1.0 * sa)) * R - slide;
-  const h = S.earH * R * cb;
-  const cx = s * (out - w / 2);
+interface EarGeo {
+  /** Which side: -1 left, 1 right. */
+  s: number;
+  /** Screen x of the wall's outer end, and of its inner end, in R. */
+  xo: number;
+  xi: number;
+  /** How far the face is turned toward us: sin of the angle, 0 when it faces away. */
+  face: number;
+}
+
+function earGeometry(s: number, a: number): EarGeo {
+  // Positive when this ear's side swings toward the viewer.
+  const u = s < 0 ? a : -a;
+  const cu = Math.cos(u);
+  const su = Math.sin(u);
+  const half = S.earD / 2;
+  const edge = (r: number) => s * (r * cu - half * su);
+  return { s, xo: edge(S.earOut), xi: edge(S.earOut - S.earT * 0.36), face: Math.max(0, su) };
+}
+
+/**
+ * Paints the whole slab as one solid: a superellipse silhouette that spans the
+ * wall (the half-capsule seen from the front) and, beside it, the outer face
+ * turned toward us (the wall swept sideways by the slab's depth). `over`
+ * draws only the part that stands over the shell.
+ */
+function paintEar(x: Ctx, R: number, e: EarGeo, cb: number, over: boolean) {
+  const s = e.s;
+  const fw = S.earD * e.face * R;
+  const h = (S.earH + (S.earFaceH - S.earH) * e.face) * R * cb;
+  const wallW = S.earT * R;
+  const full = wallW + fw;
+  const ox = e.xo * R;
+  const xb = ox + s * fw;
+  const cx = xb - s * (full / 2);
   const cy = S.earY * R;
-  const ox = cx + s * (w / 2);
-  // A superellipse, so its outer edge is one long gentle curve rather than a rectangle's.
-  const pad = blob(cx, cy, w / 2, h / 2, h / 2, S.earN, S.earN);
+  const pad = blob(cx, cy, full / 2, h / 2, h / 2, S.earN, S.earN);
   x.save();
+  if (over) {
+    // Over the shell the slab stops at the wall's inner end.
+    const r = new Path2D();
+    r.rect(Math.min(xb, e.xi * R), cy - h, Math.abs(e.xi * R - xb), 2 * h);
+    x.clip(r);
+  }
   x.clip(pad);
-  // Solid charcoal rubber, fully opaque on any background: lit at its outer
-  // edge, falling to near black where it meets the shell.
-  const g = x.createLinearGradient(ox, 0, cx - s * (w / 2), 0);
+  // The wall: solid charcoal rubber, fully opaque on any background, lit at its
+  // outer end and falling to near black where it meets the shell.
+  const g = x.createLinearGradient(ox, 0, ox - s * wallW, 0);
   g.addColorStop(0, "rgb(44,49,62)");
   g.addColorStop(0.3, "rgb(30,33,42)");
   g.addColorStop(0.75, "rgb(17,18,23)");
   g.addColorStop(1, "rgb(9,10,12)");
   x.fillStyle = g;
-  x.fillRect(cx - w, cy - h, 2 * w, 2 * h);
+  x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
   // Gloss: a cool light across the top, and a soft highlight on its shoulder.
   const top = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
   top.addColorStop(0, "rgba(130,150,196,0.4)");
@@ -457,26 +490,68 @@ function drawEar(x: Ctx, R: number, s: number, a: number, cb: number, nearSide: 
   top.addColorStop(0.5, "rgba(0,0,0,0)");
   top.addColorStop(1, "rgba(0,0,0,0.22)");
   x.fillStyle = top;
-  x.fillRect(cx - w, cy - h, 2 * w, 2 * h);
-  x.fillStyle = radialAt(x, cx + s * w * 0.2, cy - h * 0.22, h * 0.3, [
+  x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
+  x.fillStyle = radialAt(x, ox - s * wallW * 0.3, cy - h * 0.22, h * 0.3, [
     [0, [200, 210, 230]],
     [1, [200, 210, 230]],
   ], [0.3, 0]);
-  x.fillRect(cx - w, cy - h, 2 * w, 2 * h);
-  // The ear light, seen edge-on: a bright teal line down the outer edge, with a soft glow.
-  const lh = h * 0.56;
-  const k = pxScale(x);
-  const ly = cy + 0.03 * R;
-  if (canBlur(x)) {
-    x.filter = `blur(${0.02 * R * k}px)`;
-    x.fillStyle = rgba(LED, 0.16);
-    x.fill(roundRect(ox - s * 0.006 * R, ly, 0.026 * R, lh / 2, 0.026 * R));
-    x.filter = "none";
+  x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
+
+  if (fw > 0.012 * R) {
+    // The outer face: a dark rim, then an inset face a little lighter, lit from
+    // the top left, with the ear light down its middle (the side view's capsule).
+    x.save();
+    const fr = new Path2D();
+    fr.rect(Math.min(xb, ox), cy - h, fw, 2 * h);
+    x.clip(fr);
+    x.fillStyle = "rgb(12,13,17)";
+    x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
+    const inset = Math.min(0.03 * R, fw * 0.2);
+    const inner = blob(cx, cy, full / 2 - inset, h / 2 - inset, h / 2 - inset, S.earN, S.earN);
+    const fg = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
+    fg.addColorStop(0, "rgb(68,75,92)");
+    fg.addColorStop(0.5, "rgb(42,46,57)");
+    fg.addColorStop(1, "rgb(26,28,35)");
+    x.fillStyle = fg;
+    x.fill(inner);
+    const fcx = (xb + ox) / 2;
+    const lw = S.ledW * e.face * R;
+    const lh = S.ledH * R * cb;
+    if (lw > 0.004 * R) {
+      const k = pxScale(x);
+      x.save();
+      if (canBlur(x)) x.filter = `blur(${0.03 * R * k}px)`;
+      x.fillStyle = rgba(LED, 0.7);
+      x.fill(roundRect(fcx, cy, lw, lh / 2 + 0.02 * R, lw));
+      x.restore();
+      x.fillStyle = rgba(LED);
+      x.fill(roundRect(fcx, cy, lw / 2, lh / 2, lw / 2));
+      x.fillStyle = "rgba(225,252,255,0.9)";
+      x.fill(roundRect(fcx, cy, lw / 4, lh / 2 - lw / 4, lw / 4));
+    }
+    x.restore();
+    // The edge where the wall turns into the face.
+    const edge = x.createLinearGradient(ox - s * 0.025 * R, 0, ox + s * 0.025 * R, 0);
+    edge.addColorStop(0, "rgba(10,11,14,0)");
+    edge.addColorStop(0.5, "rgba(10,11,14,0.7)");
+    edge.addColorStop(1, "rgba(10,11,14,0)");
+    x.fillStyle = edge;
+    x.fillRect(ox - 0.025 * R, cy - h, 0.05 * R, 2 * h);
+  } else {
+    // Seen edge-on, the ear light is a bright teal line down the outer edge.
+    const lh = h * 0.56;
+    const k = pxScale(x);
+    const ly = cy + 0.03 * R;
+    if (canBlur(x)) {
+      x.filter = `blur(${0.02 * R * k}px)`;
+      x.fillStyle = rgba(LED, 0.16);
+      x.fill(roundRect(ox - s * 0.006 * R, ly, 0.026 * R, lh / 2, 0.026 * R));
+      x.filter = "none";
+    }
+    x.fillStyle = rgba(LED, 0.95);
+    x.fill(roundRect(ox - s * 0.008 * R, ly, 0.011 * R, lh / 2, 0.011 * R));
   }
-  x.fillStyle = rgba(LED, 0.95);
-  x.fill(roundRect(ox - s * 0.008 * R, ly, 0.011 * R, lh / 2, 0.011 * R));
-  // A fine rim of light along the outer edge, strongest at the top; and a dark
-  // line where the pad meets the page, so it reads as an object on light or dark.
+  // A fine rim of light along the outer edge, strongest at the top.
   const rim = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
   rim.addColorStop(0, "rgba(120,148,204,0.55)");
   rim.addColorStop(0.5, "rgba(80,130,160,0.32)");
@@ -485,61 +560,35 @@ function drawEar(x: Ctx, R: number, s: number, a: number, cb: number, nearSide: 
   x.strokeStyle = rim;
   x.stroke(pad);
   x.restore();
-  x.lineWidth = 0.008 * R;
-  x.strokeStyle = "rgba(6,7,10,0.55)";
-  x.stroke(pad);
+  if (!over) {
+    // A dark line where the slab meets the page, so it reads as an object on light or dark.
+    x.lineWidth = 0.008 * R;
+    x.strokeStyle = "rgba(6,7,10,0.55)";
+    x.stroke(pad);
+  }
+}
+
+/** The slab tucked behind the shell's edge: all of it from the front, its outer part when turned. */
+function drawEarBehind(x: Ctx, R: number, e: EarGeo, cb: number) {
+  paintEar(x, R, e, cb, false);
 }
 
 /**
- * The near ear's outer face, turned toward us: an opaque dark capsule inset
- * on the shell's side with the ear light down its middle, as in the side view
- * (a capsule 0.64 R by 0.87 R, its light 0.16 R by 0.52 R). It grows out of
- * the side as the head turns; it never fades.
+ * The near ear's slab where it stands over the shell: the same solid, drawn
+ * again on top so its wall and its outer face are never hidden by the shell.
  */
-function earGrow(face: number): number {
-  const t = clamp((face - 0.12) / 0.12, 0, 1);
-  return t * t * (3 - 2 * t);
-}
-
-function drawNearEarFace(x: Ctx, R: number, s: number, a: number, cb: number) {
-  const face = Math.abs(Math.sin(a));
-  const grow = earGrow(face);
-  if (grow < 0.08) return;
-  const ca = Math.cos(a);
-  const w = S.earD * face * R * grow;
-  const h = S.earFaceH * R * cb * (0.8 + 0.2 * grow);
-  const cx = s * (S.w * ca * R - 0.03 * R - w / 2);
-  const cy = S.earY * R;
-  const rad = Math.min(w / 2, 0.3 * R);
-  const pad = roundRect(cx, cy, w / 2, h / 2, rad);
+function drawEarInFront(x: Ctx, R: number, e: EarGeo, cb: number) {
+  if (e.face <= 0.004) return;
+  // The slab shades the shell where it stands over it.
+  const h = (S.earH + (S.earFaceH - S.earH) * e.face) * R * cb;
+  const span = Math.abs(e.xi - e.xo) * R;
   x.save();
-  // A dark rim, then an inset face a little lighter, lit from the top left.
-  x.fillStyle = "rgb(12,13,17)";
-  x.fill(pad);
-  const inset = Math.min(0.03 * R, w * 0.2);
-  const face2 = roundRect(cx, cy, Math.max(0.001, w / 2 - inset), h / 2 - inset, Math.max(0.001, rad - inset));
-  const fg = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  fg.addColorStop(0, "rgb(68,75,92)");
-  fg.addColorStop(0.5, "rgb(42,46,57)");
-  fg.addColorStop(1, "rgb(26,28,35)");
-  x.fillStyle = fg;
-  x.fill(face2);
-  // The ear light: a bright cyan pill, white-hot at its core, centred.
-  const lw = S.ledW * face * R * grow;
-  const lh = S.ledH * R * cb;
-  if (lw > 0.004 * R) {
-    const k = pxScale(x);
-    x.save();
-    if (canBlur(x)) x.filter = `blur(${0.03 * R * k}px)`;
-    x.fillStyle = rgba(LED, 0.7);
-    x.fill(roundRect(cx, cy, lw, lh / 2 + 0.02 * R, lw));
-    x.restore();
-    x.fillStyle = rgba(LED);
-    x.fill(roundRect(cx, cy, lw / 2, lh / 2, lw / 2));
-    x.fillStyle = "rgba(225,252,255,0.9)";
-    x.fill(roundRect(cx, cy, lw / 4, lh / 2 - lw / 4, lw / 4));
-  }
+  x.shadowColor = "rgba(60,52,64,0.4)";
+  x.shadowBlur = 0.07 * R * pxScale(x);
+  x.fillStyle = "#000";
+  x.fill(roundRect(((e.xo + e.xi) / 2) * R, S.earY * R, span / 2, h / 2 - 0.05 * R, 0.1 * R));
   x.restore();
+  paintEar(x, R, e, cb, true);
 }
 
 function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw: number, hh: number, ca: number, cb: number) {
