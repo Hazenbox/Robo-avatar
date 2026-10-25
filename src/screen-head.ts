@@ -69,16 +69,16 @@ const S = {
    * middle). It is a superellipse of power 3: every side bows out, no edge
    * is straight.
    */
-  sw: 0.93,
-  sh: 0.63,
+  sw: 0.99,
+  sh: 0.67,
   sn: 3,
   sy: 0,
   /**
    * The rim light's line: the same superellipse as the glass, the same
    * distance in on every side (0.08), and centred on it.
    */
-  rw: 0.85,
-  rh: 0.55,
+  rw: 0.91,
+  rh: 0.59,
   rn: 3,
   rdx: 0,
   rdy: 0,
@@ -98,7 +98,7 @@ const S = {
   hornTop: 0.123,
   hornTip: -1.235,
   /** Eye centres, either side of the screen's middle, and below it. */
-  eyeX: 0.33,
+  eyeX: 0.35,
   eyeY: 0,
 };
 
