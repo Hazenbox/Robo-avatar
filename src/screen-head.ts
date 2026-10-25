@@ -428,98 +428,117 @@ function drawEar(x: Ctx, R: number, s: number, a: number, cb: number, nearSide: 
   const ca = Math.cos(a);
   const sa = Math.abs(Math.sin(a));
   // The far ear swings round behind the shell; the near one in over its side.
-  const out = (S.earOut * ca - (nearSide ? 0.12 * sa : 1.0 * sa)) * R;
   const w = S.earT * R;
+  // As the near ear's face comes round to us, its profile slides in under the
+  // shell (the face capsule is the same ear, seen turned).
+  const slide = nearSide ? earGrow(sa) * w * 0.95 : 0;
+  const out = (S.earOut * ca - (nearSide ? 0.12 * sa : 1.0 * sa)) * R - slide;
   const h = S.earH * R * cb;
   const cx = s * (out - w / 2);
   const cy = S.earY * R;
+  const ox = cx + s * (w / 2);
   // A superellipse, so its outer edge is one long gentle curve rather than a rectangle's.
   const pad = blob(cx, cy, w / 2, h / 2, h / 2, S.earN, S.earN);
   x.save();
   x.clip(pad);
-  // Solid dark rubber: lightest at its outer edge, darkest where it meets the shell.
-  const g = x.createLinearGradient(cx + s * (w / 2), 0, cx - s * (w / 2), 0);
-  g.addColorStop(0, "rgb(30,36,48)");
-  g.addColorStop(0.3, "rgb(18,20,26)");
-  g.addColorStop(0.7, "rgb(10,11,14)");
-  g.addColorStop(1, "rgb(4,4,6)");
+  // Solid charcoal rubber, fully opaque on any background: lit at its outer
+  // edge, falling to near black where it meets the shell.
+  const g = x.createLinearGradient(ox, 0, cx - s * (w / 2), 0);
+  g.addColorStop(0, "rgb(44,49,62)");
+  g.addColorStop(0.3, "rgb(30,33,42)");
+  g.addColorStop(0.75, "rgb(17,18,23)");
+  g.addColorStop(1, "rgb(9,10,12)");
   x.fillStyle = g;
   x.fillRect(cx - w, cy - h, 2 * w, 2 * h);
-  // A cool navy light across its top, and a faint neutral gloss below it.
+  // Gloss: a cool light across the top, and a soft highlight on its shoulder.
   const top = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  top.addColorStop(0, "rgba(54,80,128,0.62)");
-  top.addColorStop(0.3, "rgba(44,60,96,0.2)");
-  top.addColorStop(0.55, "rgba(0,0,0,0)");
+  top.addColorStop(0, "rgba(130,150,196,0.4)");
+  top.addColorStop(0.28, "rgba(100,118,160,0.12)");
+  top.addColorStop(0.5, "rgba(0,0,0,0)");
+  top.addColorStop(1, "rgba(0,0,0,0.22)");
   x.fillStyle = top;
   x.fillRect(cx - w, cy - h, 2 * w, 2 * h);
-  x.fillStyle = radialAt(x, cx + s * w * 0.1, cy - h * 0.2, h * 0.32, [
-    [0, [150, 150, 160]],
-    [1, [150, 150, 160]],
-  ], [0.22, 0]);
+  x.fillStyle = radialAt(x, cx + s * w * 0.2, cy - h * 0.22, h * 0.3, [
+    [0, [200, 210, 230]],
+    [1, [200, 210, 230]],
+  ], [0.3, 0]);
   x.fillRect(cx - w, cy - h, 2 * w, 2 * h);
-  // The ear light, edge-on: a bright teal sliver down the outer edge, middle two thirds.
-  const ex = cx + s * (w / 2);
+  // The ear light, seen edge-on: a bright teal line down the outer edge, with a soft glow.
   const lh = h * 0.56;
   const k = pxScale(x);
-  if (canBlur(x)) x.filter = `blur(${0.014 * R * k}px)`;
-  x.fillStyle = rgba(LED, 0.55);
-  x.fill(roundRect(ex - s * 0.004 * R, cy + 0.04 * R, 0.022 * R, lh / 2, 0.02 * R));
-  x.filter = "none";
-  // A fine rim along the outer edge: navy up top, teal across the middle, gone below.
+  const ly = cy + 0.03 * R;
+  if (canBlur(x)) {
+    x.filter = `blur(${0.02 * R * k}px)`;
+    x.fillStyle = rgba(LED, 0.16);
+    x.fill(roundRect(ox - s * 0.006 * R, ly, 0.026 * R, lh / 2, 0.026 * R));
+    x.filter = "none";
+  }
+  x.fillStyle = rgba(LED, 0.95);
+  x.fill(roundRect(ox - s * 0.008 * R, ly, 0.011 * R, lh / 2, 0.011 * R));
+  // A fine rim of light along the outer edge, strongest at the top; and a dark
+  // line where the pad meets the page, so it reads as an object on light or dark.
   const rim = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  rim.addColorStop(0, "rgba(60,90,160,0.6)");
-  rim.addColorStop(0.45, "rgba(64,150,170,0.45)");
-  rim.addColorStop(0.8, "rgba(30,60,80,0)");
-  x.lineWidth = 0.014 * R;
+  rim.addColorStop(0, "rgba(120,148,204,0.55)");
+  rim.addColorStop(0.5, "rgba(80,130,160,0.32)");
+  rim.addColorStop(1, "rgba(60,80,100,0.08)");
+  x.lineWidth = 0.02 * R;
   x.strokeStyle = rim;
   x.stroke(pad);
   x.restore();
+  x.lineWidth = 0.008 * R;
+  x.strokeStyle = "rgba(6,7,10,0.55)";
+  x.stroke(pad);
 }
 
 /**
- * The near ear's outer face, turned toward us: a dark capsule inset on the
- * shell's side with the ear light down its middle, as in the side view
- * (a capsule 0.64 R by 0.87 R, its light 0.16 R by 0.52 R).
+ * The near ear's outer face, turned toward us: an opaque dark capsule inset
+ * on the shell's side with the ear light down its middle, as in the side view
+ * (a capsule 0.64 R by 0.87 R, its light 0.16 R by 0.52 R). It grows out of
+ * the side as the head turns; it never fades.
  */
+function earGrow(face: number): number {
+  const t = clamp((face - 0.12) / 0.12, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
 function drawNearEarFace(x: Ctx, R: number, s: number, a: number, cb: number) {
   const face = Math.abs(Math.sin(a));
-  // It fades in as the side comes round, so a small turn never shows a sliver.
-  const fade = clamp((face - 0.05) / 0.12, 0, 1);
-  if (fade <= 0) return;
+  const grow = earGrow(face);
+  if (grow < 0.08) return;
   const ca = Math.cos(a);
-  const w = S.earD * face * R;
-  const h = S.earFaceH * R * cb;
+  const w = S.earD * face * R * grow;
+  const h = S.earFaceH * R * cb * (0.8 + 0.2 * grow);
   const cx = s * (S.w * ca * R - 0.03 * R - w / 2);
   const cy = S.earY * R;
   const rad = Math.min(w / 2, 0.3 * R);
   const pad = roundRect(cx, cy, w / 2, h / 2, rad);
   x.save();
-  x.globalAlpha = fade;
   // A dark rim, then an inset face a little lighter, lit from the top left.
-  x.fillStyle = "rgb(14,15,19)";
+  x.fillStyle = "rgb(12,13,17)";
   x.fill(pad);
   const inset = Math.min(0.03 * R, w * 0.2);
   const face2 = roundRect(cx, cy, Math.max(0.001, w / 2 - inset), h / 2 - inset, Math.max(0.001, rad - inset));
   const fg = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  fg.addColorStop(0, "rgb(58,63,76)");
-  fg.addColorStop(0.5, "rgb(38,41,50)");
+  fg.addColorStop(0, "rgb(68,75,92)");
+  fg.addColorStop(0.5, "rgb(42,46,57)");
   fg.addColorStop(1, "rgb(26,28,35)");
   x.fillStyle = fg;
   x.fill(face2);
   // The ear light: a bright cyan pill, white-hot at its core, centred.
-  const lw = S.ledW * face * R;
+  const lw = S.ledW * face * R * grow;
   const lh = S.ledH * R * cb;
-  x.globalAlpha = fade * clamp(face / Math.sin(S.maxYaw), 0, 1);
-  const k = pxScale(x);
-  x.save();
-  if (canBlur(x)) x.filter = `blur(${0.03 * R * k}px)`;
-  x.fillStyle = rgba(LED, 0.7);
-  x.fill(roundRect(cx, cy, lw, lh / 2 + 0.02 * R, lw));
-  x.restore();
-  x.fillStyle = rgba(LED);
-  x.fill(roundRect(cx, cy, lw / 2, lh / 2, lw / 2));
-  x.fillStyle = "rgba(225,252,255,0.9)";
-  x.fill(roundRect(cx, cy, lw / 4, lh / 2 - lw / 4, lw / 4));
+  if (lw > 0.004 * R) {
+    const k = pxScale(x);
+    x.save();
+    if (canBlur(x)) x.filter = `blur(${0.03 * R * k}px)`;
+    x.fillStyle = rgba(LED, 0.7);
+    x.fill(roundRect(cx, cy, lw, lh / 2 + 0.02 * R, lw));
+    x.restore();
+    x.fillStyle = rgba(LED);
+    x.fill(roundRect(cx, cy, lw / 2, lh / 2, lw / 2));
+    x.fillStyle = "rgba(225,252,255,0.9)";
+    x.fill(roundRect(cx, cy, lw / 4, lh / 2 - lw / 4, lw / 4));
+  }
   x.restore();
 }
 
