@@ -28,6 +28,13 @@ describe("looks from untrusted input", () => {
     expect(lookOf({ shape: "star", fur: true, color: "#7cc4ff" })).toMatchObject({ shape: "star", fur: true, color: "#7cc4ff" });
   });
 
+  test("the head is classic unless it is a known other one", () => {
+    expect(lookOf({ head: "screen" }).head).toBe("screen");
+    expect(lookOf({ head: "toaster" }).head).toBe("classic");
+    expect(lookOf({}).head).toBe("classic");
+    expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, head: "screen" })).toBe(false);
+  });
+
   test("a bare list is the old saved form: just wearables", () => {
     expect(lookOf(["visor"]).addons).toEqual(outfitOf(["visor"]));
   });

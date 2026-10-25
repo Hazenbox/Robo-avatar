@@ -28,7 +28,8 @@ import { BODY_BOTTOM, FACE_FIT, bodyPath, drawFur, drawFurUnder, hexRgb } from "
 import { BODY_EXTENT, FRONT_DEPTH, drawSolidBody, solidBodyLive, solidPxPerR } from "./body-gl";
 import { faceValues, type FaceTune } from "./face-style";
 import { furVector, type FurStyle, type FurTune } from "./fur-style";
-import { DEFAULT_LOOK, type BodyShape, type MascotLook } from "./look";
+import { DEFAULT_LOOK, type BodyShape, type HeadStyle, type MascotLook } from "./look";
+import { SCREEN_HEAD_BOTTOM, drawScreenHead, type ScreenGlyph } from "./screen-head";
 
 export type { MascotAddon } from "./addons";
 
@@ -47,10 +48,11 @@ export type MascotState =
   | "sleeping"
   | "dizzy";
 
-export type MascotEmote = "love" | "proud" | "surprised" | "wink";
+export type MascotEmote = "love" | "proud" | "surprised" | "wink" | "excited" | "confused";
 
 type Eye =
-  | "pill" | "wide" | "happy" | "closed" | "half" | "x" | "spiral" | "heart" | "star" | "wink";
+  | "pill" | "wide" | "happy" | "closed" | "half" | "x" | "spiral" | "heart" | "star" | "wink"
+  | "excited" | "confused";
 type Prop = "arcs" | "bars" | "bubbles" | "stress";
 
 type StateCfg = {
@@ -266,6 +268,7 @@ export class Robo {
    * The rest of its look (look). The defaults are the original
    * character, drawn exactly as before.
    */
+  head: HeadStyle = DEFAULT_LOOK.head;
   shape: BodyShape = DEFAULT_LOOK.shape;
   fur = DEFAULT_LOOK.fur;
   furStyle: FurStyle = DEFAULT_LOOK.furStyle;
@@ -349,6 +352,8 @@ export class Robo {
   /** Puts on a whole look: wearables, shape, fur, colour and the face switches. */
   setLook(look: MascotLook) {
     this.addons = new Set(look.addons);
+    // Looks saved before there was a choice of head have the classic one.
+    this.head = look.head ?? DEFAULT_LOOK.head;
     this.shape = look.shape;
     this.fur = look.fur;
     // Looks saved before the coat had styles have neither.
@@ -421,6 +426,16 @@ export class Robo {
         this.eyeOverride = "wink";
         this.anim("tilt", [[0.12, 160, Ease.out], [0.12, (duration - 0.4) * 1000, Ease.lin], [0, 240, Ease.inOut]]);
         break;
+      case "excited":
+        this.eyeOverride = "excited";
+        this.emit("spark", 5);
+        this.hop(0.18);
+        this.anim("sx", [[1.06, 90, Ease.out], [1, 260, Ease.back]]);
+        break;
+      case "confused":
+        this.eyeOverride = "confused";
+        this.anim("tilt", [[-0.1, 200, Ease.out], [-0.1, (duration - 0.45) * 1000, Ease.lin], [0, 250, Ease.inOut]]);
+        break;
     }
     this.eyeOverrideUntil = now() + duration;
   }
@@ -438,7 +453,8 @@ export class Robo {
       else this.setState("dizzy", true);
       return;
     }
-    this.eyeOverride = "half";
+    // A poke makes the classic head flat-eyed, and the screen squeeze shut.
+    this.eyeOverride = this.head === "screen" ? "excited" : "half";
     this.eyeOverrideUntil = n + 0.8;
   }
 
@@ -639,6 +655,14 @@ export class Robo {
 
     x.save();
     x.scale(this.sx, this.sy);
+    if (this.head === "screen") {
+      this.drawScreen(x, R);
+      x.restore();
+      this.drawProps(x, R);
+      this.drawParticles(x, R);
+      x.restore();
+      return;
+    }
     const body = bodyPath(this.shape, R, G.bodyRx);
     const pose = this.addons.size ? this.addonPose(R) : null;
     if (pose) drawAddonsBehind(x, this.addons, pose);
@@ -678,6 +702,26 @@ export class Robo {
     this.drawProps(x, R);
     this.drawParticles(x, R);
     x.restore();
+  }
+
+  /** The screen head (screen-head): its own shell and face, the same states and timing. */
+  private drawScreen(x: Ctx, R: number) {
+    const eye = this.currentEye();
+    // Thinking has a face of its own on the screen; elsewhere it shares the engine's eyes.
+    const glyph: ScreenGlyph = eye === "pill" && this.state === "thinking" ? "think" : eye;
+    drawScreenHead(x, R, {
+      yaw: this.yaw,
+      pitch: this.pitch,
+      tilt: this.tilt,
+      roll: this.roll,
+      open: this.open,
+      es: this.es,
+      glyph,
+      mouth: this.mouth,
+      talking: this.cfg.mouth === "talk",
+      color: this.color ? hexRgb(this.color) : null,
+      t: now(),
+    });
   }
 
   /**
@@ -729,7 +773,8 @@ export class Robo {
     const k = 1 - clamp(-this.oy, 0, 0.4) * 1.2;
     const r = 0.78 * R * k;
     x.save();
-    x.translate(cx + this.ox * R, cy + (BODY_BOTTOM[this.shape] + 0.16) * R);
+    const bottom = this.head === "screen" ? SCREEN_HEAD_BOTTOM : BODY_BOTTOM[this.shape];
+    x.translate(cx + this.ox * R, cy + (bottom + 0.16) * R);
     x.scale(1, 0.16);
     x.fillStyle = radial(x, 0, 0, 0, r, [
       [0, [0, 0, 0], 0.6 * k], [0.55, [0, 0, 0], 0.28 * k], [1, [0, 0, 0], 0],
@@ -1013,6 +1058,34 @@ export class Robo {
       case "wink":
         this.drawEye(x, sd < 0 ? "pill" : "happy", w, h, sd, R, led);
         break;
+      case "excited":
+        // ">" and "<": squeezed shut with glee.
+        x.lineWidth = w * 0.34;
+        x.beginPath();
+        x.moveTo(sd * w * 0.5, -w * 0.62);
+        x.lineTo(-sd * w * 0.45, 0);
+        x.lineTo(sd * w * 0.5, w * 0.62);
+        x.stroke();
+        break;
+      case "confused":
+        if (sd < 0) {
+          x.beginPath();
+          x.moveTo(-w * 0.55, 0);
+          x.lineTo(w * 0.55, 0);
+          x.ellipse(0, 0, w * 0.55, h * 0.3, 0, 0, Math.PI);
+          x.closePath();
+          x.fill();
+        } else {
+          x.lineWidth = w * 0.3;
+          x.beginPath();
+          x.arc(0, -h * 0.2, w * 0.45, Math.PI * 1.08, Math.PI * 2.32);
+          x.quadraticCurveTo(0, 0, 0, h * 0.1);
+          x.stroke();
+          x.beginPath();
+          x.arc(0, h * 0.34, w * 0.2, 0, TAU);
+          x.fill();
+        }
+        break;
     }
   }
 
@@ -1050,13 +1123,15 @@ export class Robo {
   private drawProps(x: Ctx, R: number) {
     const t = now() - this.t0;
     const P = this.props;
+    // The screen head's ear pads reach further out: the arcs and bars go round them.
+    const k = this.head === "screen" ? 1.2 : 1;
     x.lineCap = "round";
 
     if (P.arcs > 0) {
       // Listening: sound arcs either side, rippling outward and lifting with the room.
       for (const side of [-1, 1]) {
         for (let i = 0; i < 3; i++) {
-          const r = R * (1.13 + i * 0.13);
+          const r = R * (1.13 * k + i * 0.13);
           const wave = 0.5 + 0.5 * Math.sin(t * 3.2 - i * 0.9);
           const level = clamp(0.35 + 0.65 * Math.max(wave * 0.6, this.room * 1.4 - i * 0.25), 0, 1);
           const alpha = P.arcs * level * (1 - i * 0.22);
@@ -1081,7 +1156,7 @@ export class Robo {
       for (let i = 0; i < 3; i++) {
         const w = R * 0.085;
         const h = R * (0.09 + 0.34 * this.bars[i]) * P.bars;
-        const X = R * (1.17 + i * 0.15) - w / 2;
+        const X = R * (1.17 * k + i * 0.15) - w / 2;
         const Y = R * 0.3 - h;
         x.fillStyle = rgba([150, 156, 175], 0.8 * P.bars);
         pill(x, X, Y + R * 0.012, w, h);

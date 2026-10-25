@@ -23,7 +23,24 @@ export const SHAPE_LABEL: Record<BodyShape, string> = {
   sparkle: "Sparkle",
 };
 
+/**
+ * Which head it has. "classic" is the lit ball with a face plate, and every
+ * setting below applies to it. "screen" is a rounded helmet with a black
+ * screen for a face, a rainbow rim, a horn and ear pads (screen-head); it
+ * keeps only the colour.
+ */
+export type HeadStyle = "classic" | "screen";
+
+export const HEAD_STYLES: readonly HeadStyle[] = ["classic", "screen"];
+
+export const HEAD_LABEL: Record<HeadStyle, string> = {
+  classic: "Classic",
+  screen: "Screen",
+};
+
 export interface MascotLook {
+  /** Which head it has; the rest of the look is for the classic one. */
+  head: HeadStyle;
   /** Wearables (addons). */
   addons: MascotAddon[];
   shape: BodyShape;
@@ -44,6 +61,7 @@ export interface MascotLook {
 }
 
 export const DEFAULT_LOOK: MascotLook = {
+  head: "classic",
   addons: [],
   shape: "round",
   fur: false,
@@ -84,6 +102,7 @@ export function lookOf(value: unknown, defaults: MascotLook = DEFAULT_LOOK): Mas
   if (!value || typeof value !== "object") return { ...defaults };
   const v = value as Record<string, unknown>;
   return {
+    head: HEAD_STYLES.includes(v.head as HeadStyle) ? (v.head as HeadStyle) : defaults.head,
     addons: v.addons === undefined ? defaults.addons : outfitOf(v.addons),
     shape: BODY_SHAPES.includes(v.shape as BodyShape) ? (v.shape as BodyShape) : defaults.shape,
     fur: typeof v.fur === "boolean" ? v.fur : defaults.fur,
@@ -98,6 +117,7 @@ export function lookOf(value: unknown, defaults: MascotLook = DEFAULT_LOOK): Mas
 
 export function sameLook(a: MascotLook, b: MascotLook): boolean {
   return (
+    a.head === b.head &&
     a.shape === b.shape &&
     a.fur === b.fur &&
     a.furStyle === b.furStyle &&

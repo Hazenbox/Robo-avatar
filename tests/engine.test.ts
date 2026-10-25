@@ -5,7 +5,7 @@ import { fakeContext, installFakeDocument } from "./helpers";
 beforeAll(() => installFakeDocument());
 
 const STATES = Object.keys(MASCOT_STATES) as MascotState[];
-const EMOTES: MascotEmote[] = ["love", "proud", "surprised", "wink"];
+const EMOTES: MascotEmote[] = ["love", "proud", "surprised", "wink", "excited", "confused"];
 
 /** Runs `seconds` of animation at 60 fps and draws every few frames. */
 function run(robo: Robo, seconds: number) {
@@ -32,6 +32,23 @@ describe("the engine draws without a browser", () => {
       robo.emote(e, 0.5);
       run(robo, 1.5);
       expect(robo.state).toBe("idle");
+    }
+  });
+
+  test("the screen head draws every state and emote, turned and tinted", () => {
+    for (const s of STATES) {
+      for (const color of [null, "#7cc4ff"]) {
+        const robo = new Robo({ look: { ...DEFAULT_LOOK, head: "screen", color } });
+        robo.setState(s, true);
+        robo.lookX = s.length % 2 ? 1 : -1;
+        robo.lookActiveUntil = Infinity;
+        expect(run(robo, 2).calls).toBeGreaterThan(50);
+      }
+    }
+    for (const e of EMOTES) {
+      const robo = new Robo({ look: { ...DEFAULT_LOOK, head: "screen" } });
+      robo.emote(e, 0.5);
+      run(robo, 1);
     }
   });
 

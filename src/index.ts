@@ -4,11 +4,14 @@ export {
   BODY_SHAPES,
   COLOR_SWATCHES,
   DEFAULT_LOOK,
+  HEAD_LABEL,
+  HEAD_STYLES,
   SHAPE_LABEL,
   colorOf,
   lookOf,
   sameLook,
   type BodyShape,
+  type HeadStyle,
   type MascotLook,
 } from "./look";
 export { ADDON_LABEL, MASCOT_ADDONS, outfitOf, toggleAddon } from "./addons";

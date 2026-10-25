@@ -5,6 +5,8 @@ import {
   BODY_SHAPES,
   COLOR_SWATCHES,
   DEFAULT_LOOK,
+  HEAD_LABEL,
+  HEAD_STYLES,
   MASCOT_ADDONS,
   MASCOT_STATES,
   SHAPE_LABEL,
@@ -38,6 +40,8 @@ const EMOTES: { key: MascotEmote; label: string; hotkey: string }[] = [
   { key: "proud", label: "Proud", hotkey: "P" },
   { key: "surprised", label: "Surprised", hotkey: "S" },
   { key: "wink", label: "Wink", hotkey: "W" },
+  { key: "excited", label: "Excited", hotkey: "E" },
+  { key: "confused", label: "Confused", hotkey: "C" },
 ];
 const SIZES = [32, 48, 96, 160];
 const EMOTE_MS = 1800;
@@ -194,6 +198,7 @@ export default function App() {
   };
   const snippet = useMemo(() => reactSnippet(look), [look]);
   const thumb = (change: Partial<MascotLook>): MascotLook => ({ ...DEFAULT_LOOK, ...change });
+  const classic = look.head === "classic";
   const customColor = !!look.color && !COLOR_SWATCHES.some((c) => c.value === look.color);
 
   return (
@@ -227,7 +232,7 @@ export default function App() {
                 label="Robo, the animated mascot. Click it to poke it."
               />
             </div>
-            <p className="hint center">Keys 1–9 pick a state · L, P, S, W play an emote · click Robo to poke it, three times to make it dizzy</p>
+            <p className="hint center">Keys 1–9 pick a state · L, P, S, W, E, C play an emote · click Robo to poke it, three times to make it dizzy</p>
           </section>
 
           <aside className="side" aria-label="Controls">
@@ -247,20 +252,32 @@ export default function App() {
               ))}
             </Group>
 
+            <Group title="Head" hint={classic ? undefined : "The screen head has its own face. Body, fur, face and wearables are for the classic head; the colour tints the shell."}>
+              {HEAD_STYLES.map((h) => (
+                <Tile key={h} label={HEAD_LABEL[h]} on={look.head === h} look={thumb({ head: h, color: look.color })} onClick={() => setLook({ head: h })} />
+              ))}
+            </Group>
+
+            {classic && (
             <Group title="Wear">
               {MASCOT_ADDONS.map((a) => (
                 <Tile key={a} label={ADDON_LABEL[a]} on={look.addons.includes(a)} look={thumb({ addons: [a] })} onClick={() => setLook({ addons: toggleAddon(look.addons, a, !look.addons.includes(a)) })} />
               ))}
             </Group>
 
+            )}
+
+            {classic && (
             <Group title="Body">
               {BODY_SHAPES.map((sh) => (
                 <Tile key={sh} label={SHAPE_LABEL[sh]} on={look.shape === sh} look={thumb({ shape: sh })} onClick={() => setLook({ shape: sh })} />
               ))}
             </Group>
 
+            )}
+
             <Group
-              title="Coat and colour"
+              title={classic ? "Coat and colour" : "Colour"}
               after={
                 <div className="swatches">
                   {COLOR_SWATCHES.map((c) => (
@@ -275,25 +292,29 @@ export default function App() {
                 </div>
               }
             >
-              <Tile label="Fur" on={look.fur} look={thumb({ fur: true, color: look.color, furStyle: look.furStyle, furTune: look.furTune })} onClick={() => setLook({ fur: !look.fur })} />
+              {classic && <Tile label="Fur" on={look.fur} look={thumb({ fur: true, color: look.color, furStyle: look.furStyle, furTune: look.furTune })} onClick={() => setLook({ fur: !look.fur })} />}
             </Group>
-            <FurSettings look={look} setLook={setLook} />
+            {classic && <FurSettings look={look} setLook={setLook} />}
 
-            <Group title="Face">
-              <Tile
-                label="Face plate"
-                on={look.facePlate}
-                look={thumb({ fur: look.fur, furStyle: look.furStyle, furTune: look.furTune, color: look.color, faceRing: look.faceRing, faceTune: look.faceTune })}
-                onClick={() => setLook({ facePlate: !look.facePlate })}
-              />
-              <Pill on={look.facePlate && look.faceRing} disabled={!look.facePlate} onClick={() => setLook({ faceRing: !look.faceRing })}>
-                Ring round the face
-              </Pill>
+            <Group title={classic ? "Face" : "Reset"}>
+              {classic && (
+                <Tile
+                  label="Face plate"
+                  on={look.facePlate}
+                  look={thumb({ fur: look.fur, furStyle: look.furStyle, furTune: look.furTune, color: look.color, faceRing: look.faceRing, faceTune: look.faceTune })}
+                  onClick={() => setLook({ facePlate: !look.facePlate })}
+                />
+              )}
+              {classic && (
+                <Pill on={look.facePlate && look.faceRing} disabled={!look.facePlate} onClick={() => setLook({ faceRing: !look.faceRing })}>
+                  Ring round the face
+                </Pill>
+              )}
               <Pill on={false} onClick={() => setLook({ ...DEFAULT_LOOK })}>
                 Reset everything
               </Pill>
             </Group>
-            <FaceSettings look={look} setLook={setLook} />
+            {classic && <FaceSettings look={look} setLook={setLook} />}
 
             <Group
               title="Voice"

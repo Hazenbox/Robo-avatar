@@ -1,6 +1,6 @@
 # Robo avatar
 
-A tiny animated robot for your app, drawn live in Canvas 2D with a WebGL2 body. No images, no Lottie, no runtime dependencies. It has nine states, four emotes, wearable add-ons, five body shapes and three fur styles, and it can follow the pointer, react to a voice level, or become a video-call `MediaStream`.
+A tiny animated robot for your app, drawn live in Canvas 2D with a WebGL2 body. No images, no Lottie, no runtime dependencies. It has two heads, nine states, six emotes, wearable add-ons, five body shapes and three fur styles, and it can follow the pointer, react to a voice level, or become a video-call `MediaStream`.
 
 **Try it:** the playground is deployed at https://hazenbox.github.io/Robo-avatar/. Or run it locally: `npm install && npm run dev` opens the playground (every control, a sheet of all states, sizes, and a live video stream). Your look is kept in the URL, so you can share it.
 
@@ -47,7 +47,8 @@ video.srcObject = feed.stream;
 ## States, emotes, add-ons
 
 - States: `idle`, `listening`, `speaking`, `thinking`, `happy`, `unimpressed`, `error`, `sleeping`, `dizzy`
-- Emotes: `love`, `proud`, `surprised`, `wink`
+- Emotes: `love`, `proud`, `surprised`, `wink`, `excited`, `confused`
+- Heads: `classic` (a lit ball with a face plate) or `screen` (a cream helmet with a black screen, a rainbow rim, a horn and ear pads): `look: { head: "screen" }`
 - Shapes: `round`, `cube`, `triangle`, `star`, `sparkle`
 - Fur: `silky`, `minky`, `pompom`, each with tunable numbers (see `FUR_PARAMS`, `FACE_PARAMS`)
 
