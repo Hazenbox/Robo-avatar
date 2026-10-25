@@ -2,7 +2,7 @@
 
 A tiny animated robot for your app, drawn live in Canvas 2D with a WebGL2 body. No images, no Lottie, no runtime dependencies. It has nine states, four emotes, wearable add-ons, five body shapes and three fur styles, and it can follow the pointer, react to a voice level, or become a video-call `MediaStream`.
 
-**Try it:** `npm install && npm run dev` opens the playground (every control, a sheet of all states, sizes, and a live video stream). Your look is kept in the URL, so you can share it.
+**Try it:** the playground is deployed at https://hazenbox.github.io/Robo-avatar/. Or run it locally: `npm install && npm run dev` opens the playground (every control, a sheet of all states, sizes, and a live video stream). Your look is kept in the URL, so you can share it.
 
 ## Install
 
