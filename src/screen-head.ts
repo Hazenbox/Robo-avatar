@@ -61,9 +61,9 @@ const S = {
   /** The shell: half its width; above and below the middle, how far it reaches and how square it is. */
   w: 1.255,
   top: 0.92,
-  bottom: 0.9,
+  bottom: 0.93,
   nTop: 2.3,
-  nBottom: 5,
+  nBottom: 4.6,
   nSide: 2.6,
   /**
    * The glass: half its size, and its drop below the shell's middle. It is a
@@ -90,14 +90,14 @@ const S = {
   maxYaw: 0.3,
   maxPitch: 0.22,
   /** Ear pads: centre out from the middle, how far they stand proud of the shell, their face side-on, height, drop. */
-  earX: 1.31,
+  earX: 1.25,
   earT: 0.3,
   earD: 0.66,
-  earH: 0.76,
-  earY: 0.137,
+  earH: 0.748,
+  earY: 0.143,
   /** The horn: base half-width, top half-width, top. */
-  hornBase: 0.19,
-  hornTop: 0.115,
+  hornBase: 0.184,
+  hornTop: 0.123,
   hornTip: -1.235,
   /** Eye centres, either side of the screen's middle, and below it. */
   eyeX: 0.39,
@@ -109,7 +109,7 @@ export const SCREEN_HEAD_BOTTOM = S.bottom * S.scale;
 
 const CREAM: RGB = [246, 243, 238];
 /** The shell's edges turn away into a cool, faintly lavender shade. */
-const EDGE_SHADE: RGB = [150, 140, 160];
+const EDGE_SHADE: RGB = [176, 166, 178];
 const SIDE_SHADE: RGB = [178, 170, 206];
 
 /**
@@ -164,7 +164,7 @@ function blob(cx: number, cy: number, hw: number, up: number, down: number, nUp:
     const c = Math.cos(t);
     const s = Math.sin(t);
     const n = s < 0 ? nUp : nDown;
-    const nx = nSide || n;
+    const nx = s < 0 && nSide ? nSide : n;
     const X = cx + Math.sign(c) * Math.pow(Math.abs(c), 2 / nx) * hw;
     const Y = cy + Math.sign(s) * Math.pow(Math.abs(s), 2 / n) * (s < 0 ? up : down);
     if (i === 0) p.moveTo(X, Y);
@@ -350,38 +350,51 @@ function drawShell(x: Ctx, R: number, color: RGB | null, sa: number, near: numbe
   }
 }
 
-/** The horn: a soft orange stub, a rounded top, its root in the shell; it leans the way the face points. */
+/**
+ * The horn: a soft orange dome. A full round top, nearly upright sides that
+ * flare a little where it sits on the shell, a dark contact line at its
+ * root. It leans the way the face points.
+ */
 function drawHorn(x: Ctx, R: number, sa: number) {
   const lean = (sa / Math.sin(S.maxYaw)) * 0.12 * R;
   const bw = S.hornBase * R;
   const tw = S.hornTop * R;
   const top = S.hornTip * R;
-  const base = -0.8 * R;
-  const capR = tw * 0.95;
+  const base = -0.86 * R;
+  const seat = -0.94 * R;
+  const capY = top + tw;
   const p = new Path2D();
   p.moveTo(-bw, base);
-  p.bezierCurveTo(-bw, base - 0.12 * R, lean - tw, top + capR + 0.08 * R, lean - tw, top + capR);
-  p.bezierCurveTo(lean - tw, top - 0.005 * R, lean + tw, top - 0.005 * R, lean + tw, top + capR);
-  p.bezierCurveTo(lean + tw, top + capR + 0.08 * R, bw, base - 0.12 * R, bw, base);
+  // Up the left: the flare, then the upright side.
+  p.bezierCurveTo(-bw * 0.86, seat - 0.02 * R, lean - tw * 1.08, capY + 0.1 * R, lean - tw, capY);
+  // Over the dome.
+  p.bezierCurveTo(lean - tw, top - tw * 0.32, lean + tw, top - tw * 0.32, lean + tw, capY);
+  // Down the right.
+  p.bezierCurveTo(lean + tw * 1.08, capY + 0.1 * R, bw * 0.86, seat - 0.02 * R, bw, base);
   p.closePath();
-  // Round, so shaded across: lit on the left, deeper orange on the right.
-  const g = x.createLinearGradient(-bw, 0, bw + lean, 0);
-  g.addColorStop(0, "rgb(255,186,64)");
-  g.addColorStop(0.45, "rgb(255,160,38)");
-  g.addColorStop(1, "rgb(232,122,22)");
+  // Lit from the top left: yellow-orange there, deeper orange down and to the right.
+  const g = x.createLinearGradient(-bw, top, bw + lean, seat);
+  g.addColorStop(0, "rgb(255,198,72)");
+  g.addColorStop(0.5, "rgb(255,168,44)");
+  g.addColorStop(1, "rgb(238,128,28)");
   x.fillStyle = g;
   x.fill(p);
   x.save();
   x.clip(p);
-  // Its top catches the light; its root sits in the shell's shadow.
-  x.fillStyle = radialAt(x, lean - tw * 0.2, top + capR * 0.7, tw * 1.4, [
-    [0, [255, 226, 140]],
-    [1, [255, 226, 140]],
-  ], [0.95, 0]);
+  x.fillStyle = radialAt(x, lean - tw * 0.3, capY - tw * 0.1, tw * 1.3, [
+    [0, [255, 222, 130]],
+    [1, [255, 222, 130]],
+  ], [0.9, 0]);
   x.fillRect(-2 * bw, top - R * 0.1, 4 * bw + Math.abs(lean), -top);
-  const root = x.createLinearGradient(0, base - 0.12 * R, 0, base);
-  root.addColorStop(0, "rgba(160,70,10,0)");
-  root.addColorStop(1, "rgba(160,70,10,0.35)");
+  // Its right flank turns away; its root sits in a dark orange contact shadow.
+  const flank = x.createLinearGradient(lean, 0, lean + tw * 1.4, 0);
+  flank.addColorStop(0, "rgba(200,90,10,0)");
+  flank.addColorStop(1, "rgba(200,90,10,0.3)");
+  x.fillStyle = flank;
+  x.fill(p);
+  const root = x.createLinearGradient(0, seat - 0.05 * R, 0, seat);
+  root.addColorStop(0, "rgba(170,60,10,0)");
+  root.addColorStop(1, "rgba(170,60,10,0.6)");
   x.fillStyle = root;
   x.fill(p);
   x.restore();
@@ -395,21 +408,23 @@ function drawEar(x: Ctx, R: number, s: number, a: number, cb: number, nearSide: 
   const cy = S.earY * R;
   const w = S.earT * R;
   const h = S.earH * R * cb;
-  const pad = roundRect(cx, cy, w / 2, h / 2, 0.14 * R);
-  // Soft rubber: dark charcoal, a cool light along the outer edge, a sheen on top.
-  const g = x.createLinearGradient(cx - s * (w / 2), 0, cx + s * (w / 2), 0);
-  g.addColorStop(0, "rgb(26,27,32)");
-  g.addColorStop(0.45, "rgb(38,40,48)");
-  g.addColorStop(0.8, "rgb(84,92,110)");
-  g.addColorStop(1, "rgb(70,78,96)");
+  const pad = roundRect(cx, cy, w / 2, h / 2, 0.13 * R);
+  // Glossy dark rubber: near black, darkest where it meets the shell, with a
+  // cool blue-teal light running down its outer curve, strongest up top.
+  const g = x.createLinearGradient(cx + s * (w / 2), 0, cx - s * (w / 2), 0);
+  g.addColorStop(0, "rgb(64,84,104)");
+  g.addColorStop(0.18, "rgb(40,48,60)");
+  g.addColorStop(0.5, "rgb(24,26,32)");
+  g.addColorStop(1, "rgb(14,15,18)");
   x.fillStyle = g;
   x.fill(pad);
   x.save();
   x.clip(pad);
   const sheen = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  sheen.addColorStop(0, "rgba(255,255,255,0.16)");
-  sheen.addColorStop(0.3, "rgba(255,255,255,0)");
-  sheen.addColorStop(1, "rgba(0,0,0,0.25)");
+  sheen.addColorStop(0, "rgba(150,190,220,0.3)");
+  sheen.addColorStop(0.25, "rgba(150,190,220,0.06)");
+  sheen.addColorStop(0.7, "rgba(0,0,0,0)");
+  sheen.addColorStop(1, "rgba(0,0,0,0.3)");
   x.fillStyle = sheen;
   x.fill(pad);
   x.restore();
@@ -559,8 +574,8 @@ function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw
 function light(x: Ctx, R: number, c: RGB = GLYPH, glow: RGB = BLOOM) {
   x.fillStyle = rgba(c);
   x.strokeStyle = rgba(c);
-  x.shadowColor = rgba(glow, 0.85);
-  x.shadowBlur = 0.1 * R * pxScale(x);
+  x.shadowColor = rgba(glow, 0.5);
+  x.shadowBlur = 0.045 * R * pxScale(x);
   x.lineCap = "round";
   x.lineJoin = "round";
 }
@@ -573,7 +588,7 @@ const GLYPH_SCALE = 1.25;
 function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   const R = R0 * GLYPH_SCALE;
   // Light on glass has soft edges, never a vector-crisp one.
-  if (canBlur(x)) x.filter = `blur(${0.006 * R * pxScale(x)}px)`;
+  if (canBlur(x)) x.filter = `blur(${0.005 * R * pxScale(x)}px)`;
   light(x, R);
   for (const sd of [-1, 1]) {
     x.save();
@@ -585,10 +600,9 @@ function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   if (canBlur(x)) x.filter = "none";
 }
 
+/** A slightly squared oval (a superellipse of power 2.3), as the screen draws its eyes. */
 function oval(x: Ctx, R: number, rx: number, ry: number, dy = 0) {
-  x.beginPath();
-  x.ellipse(0, dy * R, rx * R, Math.max(ry * R, 0.01 * R), 0, 0, TAU);
-  x.fill();
+  x.fill(blob(0, dy * R, rx * R, Math.max(ry * R, 0.01 * R), Math.max(ry * R, 0.01 * R), 2.3, 2.3));
 }
 
 /**
@@ -618,11 +632,11 @@ function drawEye(x: Ctx, R: number, g: ScreenGlyph, sd: number, p: ScreenPose) {
   switch (g) {
     case "pill":
       // Curious: fat, nearly round ovals.
-      oval(x, R, 0.146 * p.es, 0.173 * p.es * open);
+      oval(x, R, 0.139 * p.es, 0.17 * p.es * open);
       break;
     case "wide":
       // Surprised: the same width, taller.
-      oval(x, R, 0.138 * p.es, 0.192 * p.es * open);
+      oval(x, R, 0.132 * p.es, 0.19 * p.es * open);
       break;
     case "happy":
       // A thick arch, a full half circle, its feet on the eye line.
