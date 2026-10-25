@@ -65,24 +65,23 @@ const S = {
   nTop: 2.3,
   nSide: 2.6,
   /**
-   * The glass: half its size, and its drop below the shell's middle. It is a
-   * superellipse of power 3: every side bows out, no edge is straight.
+   * The glass: half its size, centred on the shell (sy is its drop below the
+   * middle). It is a superellipse of power 3: every side bows out, no edge
+   * is straight.
    */
-  sw: 1.057,
-  sh: 0.71,
+  sw: 0.93,
+  sh: 0.63,
   sn: 3,
-  sy: 0.077,
+  sy: 0,
   /**
-   * The rim light's line: a slightly squarer superellipse (3.3), half its
-   * size, and where its middle sits from the glass's. It is about 0.1 in from
-   * the glass at the top and sides but hugs the bottom (0.04), as the light
-   * sits on the glass's inner bevel, seen from a touch above.
+   * The rim light's line: the same superellipse as the glass, the same
+   * distance in on every side (0.08), and centred on it.
    */
-  rw: 0.966,
-  rh: 0.64,
-  rn: 3.3,
-  rdx: 0.0075,
-  rdy: 0.0285,
+  rw: 0.85,
+  rh: 0.55,
+  rn: 3,
+  rdx: 0,
+  rdy: 0,
   /** How far the screen travels across the front as it turns. */
   depth: 0.5,
   /** The turn, in radians at yaw / pitch = ±1: a box can't turn as far as a ball. */
@@ -99,8 +98,8 @@ const S = {
   hornTop: 0.123,
   hornTip: -1.235,
   /** Eye centres, either side of the screen's middle, and below it. */
-  eyeX: 0.39,
-  eyeY: 0.072,
+  eyeX: 0.33,
+  eyeY: 0,
 };
 
 /** Its lowest point, for the floor shadow. */
@@ -599,7 +598,7 @@ function light(x: Ctx, R: number, c: RGB = GLYPH, glow: RGB = BLOOM) {
 const STROKE = 0.084;
 
 /** Glyphs are drawn at this size; the numbers below are at 1. */
-const GLYPH_SCALE = 1.25;
+const GLYPH_SCALE = 1.12;
 
 function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   const R = R0 * GLYPH_SCALE;
