@@ -105,6 +105,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .sheet { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 .cell { display: grid; justify-items: center; gap: 4px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; font-size: 13px; }
 .cell[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.sheet.four { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+@media (min-width: 900px) { .sheet.four { grid-template-columns: repeat(4, 1fr); } }
+.caps { text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; font-weight: 600; color: var(--muted); }
 .cellCanvas { width: 100%; aspect-ratio: 1; display: block; }
 
 .sizes { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }

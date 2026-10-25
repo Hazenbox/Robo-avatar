@@ -434,7 +434,8 @@ export class Robo {
         break;
       case "confused":
         this.eyeOverride = "confused";
-        this.anim("tilt", [[-0.1, 200, Ease.out], [-0.1, (duration - 0.45) * 1000, Ease.lin], [0, 250, Ease.inOut]]);
+        // The screen says it with a question mark; only the classic head cocks itself too.
+        if (this.head === "classic") this.anim("tilt", [[-0.1, 200, Ease.out], [-0.1, (duration - 0.45) * 1000, Ease.lin], [0, 250, Ease.inOut]]);
         break;
     }
     this.eyeOverrideUntil = now() + duration;

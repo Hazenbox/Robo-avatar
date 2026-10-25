@@ -30,7 +30,7 @@ const STATE_LABEL: Record<MascotState, string> = {
   speaking: "Speaking",
   thinking: "Thinking",
   happy: "Happy",
-  unimpressed: "Unimpressed",
+  unimpressed: "Unimpressed (sad)",
   error: "Error",
   sleeping: "Sleeping",
   dizzy: "Dizzy",
@@ -44,6 +44,55 @@ const EMOTES: { key: MascotEmote; label: string; hotkey: string }[] = [
   { key: "confused", label: "Confused", hotkey: "C" },
 ];
 const SIZES = [32, 48, 96, 160];
+
+/** The named expressions, as on the reference sheet: each is a state, or a state with an emote held on it. */
+const EXPRESSIONS: { label: string; state: MascotState; emote?: MascotEmote }[] = [
+  { label: "Happy", state: "happy" },
+  { label: "Excited", state: "idle", emote: "excited" },
+  { label: "Curious", state: "idle" },
+  { label: "Sad", state: "unimpressed" },
+  { label: "Surprised", state: "idle", emote: "surprised" },
+  { label: "Thinking", state: "thinking" },
+  { label: "Confused", state: "idle", emote: "confused" },
+  { label: "Error", state: "error" },
+];
+
+/** One expression, held: its emote is played once on mount and never lets go. */
+function ExpressionCell({ label, state, emote, look, glow, reduced, onPick, register }: {
+  label: string;
+  state: MascotState;
+  emote?: MascotEmote;
+  look: MascotLook;
+  glow: number;
+  reduced: boolean;
+  onPick: () => void;
+  register: (h: RoboHandle | null) => void;
+}) {
+  const handle = useRef<RoboHandle | null>(null);
+  useEffect(() => {
+    if (emote) handle.current?.emote(emote, Infinity);
+  }, [emote]);
+  return (
+    <button type="button" className="cell" onClick={onPick}>
+      <RoboAvatar
+        ref={(h) => {
+          handle.current = h;
+          register(h);
+        }}
+        className="cellCanvas"
+        state={state}
+        look={look}
+        glow={glow}
+        shadow={false}
+        followPointer={false}
+        pokeOnClick={false}
+        reducedMotion={reduced ? true : "auto"}
+        radius={0.28}
+      />
+      <span className="caps">{label}</span>
+    </button>
+  );
+}
 const EMOTE_MS = 1800;
 
 type SetLook = (change: Partial<MascotLook> | ((look: MascotLook) => MascotLook)) => void;
@@ -351,6 +400,26 @@ export default function App() {
             </Group>
           </aside>
         </div>
+
+        <section className="section" aria-label="Expressions">
+          <h2>Expressions</h2>
+          <div className="sheet four">
+            {EXPRESSIONS.map((e) => (
+              <ExpressionCell
+                key={e.label}
+                {...e}
+                look={look}
+                glow={glow / 100}
+                reduced={reduced}
+                register={reg(`expr-${e.label}`)}
+                onPick={() => {
+                  choose(e.state);
+                  if (e.emote) emote(e.emote);
+                }}
+              />
+            ))}
+          </div>
+        </section>
 
         <section className="section" aria-label="Every state">
           <h2>Every state</h2>
