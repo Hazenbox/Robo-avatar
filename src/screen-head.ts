@@ -96,8 +96,8 @@ const S = {
   /** How far the screen travels across the front as it turns. */
   depth: 0.5,
   /** The turn, in radians at yaw / pitch = ±1: a box can't turn as far as a ball. */
-  maxYaw: 0.5,
-  maxPitch: 0.34,
+  maxYaw: 0.4,
+  maxPitch: 0.28,
   /** Ear pads: centre out from the middle, how far they stand proud of the shell, their face side-on, height, drop. */
   earOut: 1.39,
   earT: 0.36,
@@ -346,7 +346,7 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
   // The face looks a touch further than the head turns, so it reads as a glance.
   // Its eyes lead its head: they slide across the glass toward where it looks,
   // well past where the screen itself has turned to.
-  x.translate(fx + p.yaw * 0.17 * R, fy + (S.eyeY + p.pitch * 0.1) * R);
+  x.translate(fx + p.yaw * 0.13 * R, fy + (S.eyeY + p.pitch * 0.08) * R);
   x.scale(ca, cb);
   x.rotate(p.roll);
   drawGlyphs(x, R, p);
