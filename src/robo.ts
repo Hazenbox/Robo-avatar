@@ -596,7 +596,8 @@ export class Robo {
     }
     if (!this.locks.has("sy")) this.sy += (tgSy - this.sy) * kGen;
     if (!this.locks.has("sx")) this.sx += (tgSx - this.sx) * kGen;
-    const tgTilt = still ? 0 : this.yaw * 0.06;
+    // The screen head leans into a turn more: its whole head tips toward where it looks.
+    const tgTilt = still ? 0 : this.yaw * (this.head === "screen" ? 0.13 : 0.06);
     if (!this.locks.has("tilt")) this.tilt += (tgTilt - this.tilt) * kGen;
 
     // Mouth: fast attack, slower release, like a VU meter, so it never chatters.
@@ -715,6 +716,8 @@ export class Robo {
     x.scale(this.sx, this.sy);
     if (this.head === "screen") {
       // Everything it shows is on its screen and its rim: nothing floats round it.
+      // The whole head also shifts a little toward where it looks.
+      x.translate(this.yaw * 0.07 * R, this.pitch * 0.05 * R);
       this.drawScreen(x, R);
       x.restore();
       x.restore();
