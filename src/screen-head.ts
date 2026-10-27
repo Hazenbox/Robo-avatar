@@ -811,38 +811,18 @@ const easeInOut = (t: number) => {
 };
 
 /**
- * Generating: the screen becomes a page being written. Its eyes move up and
- * narrow, looking down at the work; a twinkle beside them; and below, lines of
- * light type themselves out left to right behind a bright cursor, the page
+ * Generating: the whole screen becomes a page being written. Lines of light
+ * type themselves out left to right behind a bright cursor, the page
  * scrolling up a line as each new one begins. In R, from the eyes' line.
  */
 function drawWriting(x: Ctx, R: number, p: ScreenPose) {
-  const open = Math.max(0.06, p.open);
-  // Eyes, high and a little narrowed, looking down at the page.
-  for (const sd of [-1, 1]) oval(x, R, 0.088, 0.082 * open, -0.35, sd * 0.29);
-  // A twinkle beside them: the mark of something being made.
-  const tw = 0.55 + 0.45 * Math.abs(Math.sin(p.t * 3.1));
-  x.save();
-  x.translate(0.56 * R, -0.37 * R);
-  x.rotate(p.t * 0.6);
-  x.scale(tw, tw);
-  x.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const r = (i % 2 ? 0.022 : 0.085) * R;
-    const a = -Math.PI / 2 + (i * Math.PI) / 4;
-    x.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-  }
-  x.closePath();
-  x.fill();
-  x.restore();
-
-  // The page: four rows, each line taking 0.85 s to write.
+  // The page: five rows filling the screen, each line taking 0.85 s to write.
   const per = 0.85;
-  const rows = 4;
+  const rows = 5;
   const left = -0.58 * R;
   const maxW = 1.16 * R;
-  const top = -0.14 * R;
-  const gap = 0.16 * R;
+  const top = -0.42 * R;
+  const gap = 0.17 * R;
   const thick = 0.056 * R;
   const tt = p.t / per;
   const L = Math.floor(tt);
