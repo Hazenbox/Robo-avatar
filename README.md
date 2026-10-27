@@ -15,7 +15,7 @@ Little robots that show what your AI is doing,<br>so waiting feels like watching
 
 <br>
 
-**[▶ &nbsp;Play with them live](https://hazenbox.github.io/Robo-avatar/)**
+**[▶ &nbsp;Play with them live](https://roboavatar.vercel.app)**
 
 <br>
 
@@ -36,7 +36,7 @@ Those few seconds are when people decide whether to trust it. A spinner says *"w
 Robo listens when you type. It thinks. It goes off to read a dozen sources. Then it writes your answer, line by line, and gives a little nod when it's done. No explanation needed, anyone gets it at a glance.
 
 <div align="center">
-<img src="assets/chat.gif" alt="A chat where the robot warms up, reads twelve sources, then writes the answer" width="100%">
+<img src="assets/chat.gif" alt="A chat where someone asks about Upen, and the robot warms up, reads Upen's work, then writes the answer" width="100%">
 </div>
 
 ## Two characters
@@ -114,7 +114,7 @@ import { RoboAvatar } from "robo-avatar/react";
 <RoboAvatar size={64} state="thinking" />
 ```
 
-Change `state` as your AI moves along, and Robo follows. Not a developer? Open the [playground](https://hazenbox.github.io/Robo-avatar/), design your robot, and hand over the code it writes for you.
+Change `state` as your AI moves along, and Robo follows. Not a developer? Open the [playground](https://roboavatar.vercel.app), design your robot, and hand over the code it writes for you.
 
 > Robo isn't on npm yet. Until it is, clone this repo, run `npm install && npm run build` inside the `robo` folder, and `npm link`.
 
@@ -131,7 +131,7 @@ Run the playground on your own computer: `cd robo && npm install && npm run dev`
 
 <div align="center">
 
-Designed and built by **Upen Krishnan**.<br>
+Designed and built by **[Upen](https://www.linkedin.com/in/upen-design/)**, a principal product designer who builds.<br>
 Open source under the [MIT licence](LICENSE). Inspired by coucou's Mochi; no code is shared.
 
 </div>
