@@ -136,49 +136,81 @@ export function drawVisorUnder(x: Ctx, p: AddonPose) {
   const W = VISOR.w * R * ca;
   const y = VISOR.y * R * cb;
 
-  // A soft strap round the head: it curves as a band does, wraps darker toward
-  // its edges, and stops at the head's own outline.
-  const sh = 0.1 * R * cb;
-  const bow = 0.05 * R * cb;
+  // The strap: a woven elastic band round the head. It curves as a band round
+  // a ball does (dipping a little in front), stops at the head's outline, and
+  // its weave is laid out round the head, so it scrolls and squeezes as it turns.
+  const sh = 0.125 * R * cb;
+  const bow = (0.055 * R + p.fy * 0.3) * cb;
   const edgeY = (xx: number) => y - sh / 2 + bow * Math.sqrt(Math.max(0, 1 - (xx / (1.05 * R)) ** 2));
+  const steps = 32;
+  const xs = (i: number) => -1.4 * R + (2.8 * R * i) / steps;
   x.save();
   x.beginPath();
   x.ellipse(-p.fx, -p.fy, 1.0 * R, 0.99 * R, 0, 0, Math.PI * 2);
   x.clip();
   const band = new Path2D();
-  for (let i = 0; i <= 28; i++) {
-    const xx = -1.4 * R + (2.8 * R * i) / 28;
-    if (i === 0) band.moveTo(xx, edgeY(xx));
-    else band.lineTo(xx, edgeY(xx));
-  }
-  for (let i = 28; i >= 0; i--) {
-    const xx = -1.4 * R + (2.8 * R * i) / 28;
-    band.lineTo(xx, edgeY(xx) + sh);
-  }
+  for (let i = 0; i <= steps; i++) (i === 0 ? band.moveTo(xs(i), edgeY(xs(i))) : band.lineTo(xs(i), edgeY(xs(i))));
+  for (let i = steps; i >= 0; i--) band.lineTo(xs(i), edgeY(xs(i)) + sh);
   band.closePath();
   const sg = x.createLinearGradient(0, y - sh / 2, 0, y + sh / 2 + bow);
   sg.addColorStop(0, rgba(GRAPHITE_HI));
-  sg.addColorStop(0.45, rgba(GRAPHITE));
+  sg.addColorStop(0.5, rgba(GRAPHITE));
   sg.addColorStop(1, rgba(GRAPHITE_LO));
   x.fillStyle = sg;
   x.fill(band);
+  x.save();
+  x.clip(band);
+  // The weave: fine ribs across the band, evenly spaced round the head.
+  const ribs = 64;
+  for (let k = 0; k < ribs; k++) {
+    const th = (k / ribs) * Math.PI * 2 + p.a;
+    const ct = Math.cos(th);
+    if (ct < 0.04) continue;
+    const X = Math.sin(th) * 1.0 * R;
+    const top = edgeY(X);
+    x.strokeStyle = k % 2 ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.28)";
+    x.lineWidth = Math.max(0.004 * R, 0.014 * R * ct);
+    x.beginPath();
+    x.moveTo(X, top);
+    x.lineTo(X, top + sh);
+    x.stroke();
+  }
+  // Stitched edges, and a fine light running down its middle.
+  for (const f of [0.14, 0.86]) {
+    x.setLineDash([0.02 * R, 0.016 * R]);
+    x.strokeStyle = "rgba(255,255,255,0.22)";
+    x.lineWidth = 0.006 * R;
+    x.beginPath();
+    for (let i = 0; i <= steps; i++) (i === 0 ? x.moveTo(xs(i), edgeY(xs(i)) + sh * f) : x.lineTo(xs(i), edgeY(xs(i)) + sh * f));
+    x.stroke();
+  }
+  x.setLineDash([]);
+  x.save();
+  x.shadowColor = LED_GLOW;
+  x.shadowBlur = 0.04 * R;
+  x.strokeStyle = rgba(ACCENT, 0.5);
+  x.lineWidth = 0.007 * R;
+  x.lineCap = "round";
+  x.beginPath();
+  for (let i = 0; i <= steps; i++) (i === 0 ? x.moveTo(xs(i), edgeY(xs(i)) + sh * 0.5) : x.lineTo(xs(i), edgeY(xs(i)) + sh * 0.5));
+  x.stroke();
+  x.restore();
+  // It wraps away darker at its ends, and is lit along its top edge.
   const wrap = x.createLinearGradient(-1.1 * R, 0, 1.1 * R, 0);
-  wrap.addColorStop(0, "rgba(0,0,0,0.6)");
+  wrap.addColorStop(0, "rgba(0,0,0,0.65)");
   wrap.addColorStop(0.3, "rgba(0,0,0,0)");
   wrap.addColorStop(0.7, "rgba(0,0,0,0)");
-  wrap.addColorStop(1, "rgba(0,0,0,0.6)");
+  wrap.addColorStop(1, "rgba(0,0,0,0.65)");
   x.fillStyle = wrap;
   x.fill(band);
-  // A fine seam along its lit edge.
-  x.strokeStyle = "rgba(255,255,255,0.14)";
-  x.lineWidth = 0.008 * R;
-  x.beginPath();
-  for (let i = 0; i <= 28; i++) {
-    const xx = -1.4 * R + (2.8 * R * i) / 28;
-    if (i === 0) x.moveTo(xx, edgeY(xx) + 0.012 * R);
-    else x.lineTo(xx, edgeY(xx) + 0.012 * R);
-  }
-  x.stroke();
+  const lit = x.createLinearGradient(0, y - sh / 2, 0, y + sh / 2 + bow);
+  lit.addColorStop(0, "rgba(255,255,255,0.18)");
+  lit.addColorStop(0.3, "rgba(255,255,255,0)");
+  lit.addColorStop(0.8, "rgba(0,0,0,0)");
+  lit.addColorStop(1, "rgba(0,0,0,0.3)");
+  x.fillStyle = lit;
+  x.fill(band);
+  x.restore();
   x.restore();
 
   // Contact shadow on the plate, then the glass.
