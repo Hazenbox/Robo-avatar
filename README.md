@@ -1,6 +1,6 @@
 # Robo avatar
 
-A tiny animated robot for your app, drawn live in Canvas 2D with a WebGL2 body. No images, no Lottie, no runtime dependencies. It has two heads, nine states, six emotes, wearable add-ons, five body shapes and three fur styles, and it can follow the pointer, react to a voice level, or become a video-call `MediaStream`.
+A tiny animated robot for your app, drawn live in Canvas 2D with a WebGL2 body. No images, no Lottie, no runtime dependencies. It has two heads, nine states, six emotes, wearable add-ons, and three fur styles, and it can follow the pointer, react to a voice level, or become a video-call `MediaStream`.
 
 **Try it:** the playground is deployed at https://hazenbox.github.io/Robo-avatar/. Or run it locally: `npm install && npm run dev` opens the playground (every control, a sheet of all states, sizes, and a live video stream). Your look is kept in the URL, so you can share it.
 
@@ -18,7 +18,7 @@ Plain JavaScript:
 import { mountRobo } from "robo-avatar";
 
 const robo = mountRobo(document.querySelector("canvas")!, {
-  look: { shape: "round", fur: true },
+  look: { fur: true },
   state: "idle",
 });
 robo.setState("thinking");
@@ -32,7 +32,7 @@ React:
 ```tsx
 import { RoboAvatar } from "robo-avatar/react";
 
-<RoboAvatar size={96} state="happy" look={{ shape: "star" }} />;
+<RoboAvatar size={96} state="happy" look={{ head: "screen" }} />;
 ```
 
 Video call tile:
@@ -49,7 +49,6 @@ video.srcObject = feed.stream;
 - States: `idle`, `listening`, `speaking`, `thinking`, `happy`, `unimpressed`, `error`, `sleeping`, `dizzy`
 - Emotes: `love`, `proud`, `surprised`, `wink`, `excited`, `confused`
 - Heads: `classic` (a lit ball with a face plate) or `screen` (a cream helmet with a black screen, a rainbow rim, a horn and ear pads): `look: { head: "screen" }`
-- Shapes: `round`, `cube`, `triangle`, `star`, `sparkle`
 - Fur: `silky`, `minky`, `pompom`, each with tunable numbers (see `FUR_PARAMS`, `FACE_PARAMS`)
 
 `MASCOT_ADDONS`, `COLOR_SWATCHES` and `DEFAULT_LOOK` list the rest.
@@ -58,7 +57,7 @@ video.srcObject = feed.stream;
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `look` | `DEFAULT_LOOK` | Body shape, colour, fur, face and add-ons |
+| `look` | `DEFAULT_LOOK` | Head, colour, fur, face and add-ons |
 | `state` | `"idle"` | Starting state |
 | `glow` | `0.3` | Halo strength, 0 to 1 |
 | `shadow` | `true` | Floor shadow |

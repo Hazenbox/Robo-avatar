@@ -2,14 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RoboAvatar } from "robo-avatar/react";
 import {
   ADDON_LABEL,
-  BODY_SHAPES,
   COLOR_SWATCHES,
   DEFAULT_LOOK,
   HEAD_LABEL,
   HEAD_STYLES,
   MASCOT_ADDONS,
   MASCOT_STATES,
-  SHAPE_LABEL,
   colorOf,
   createRoboMediaStream,
   toggleAddon,
@@ -301,7 +299,7 @@ export default function App() {
               ))}
             </Group>
 
-            <Group title="Head" hint={classic ? undefined : "The screen head has its own face. Body, fur, face and wearables are for the classic head; the colour tints the shell."}>
+            <Group title="Head" hint={classic ? undefined : "The screen head has its own face. Fur, face and wearables are for the classic head; the colour tints the shell."}>
               {HEAD_STYLES.map((h) => (
                 <Tile key={h} label={HEAD_LABEL[h]} on={look.head === h} look={thumb({ head: h, color: look.color })} onClick={() => setLook({ head: h })} />
               ))}
@@ -316,14 +314,6 @@ export default function App() {
 
             )}
 
-            {classic && (
-            <Group title="Body">
-              {BODY_SHAPES.map((sh) => (
-                <Tile key={sh} label={SHAPE_LABEL[sh]} on={look.shape === sh} look={thumb({ shape: sh })} onClick={() => setLook({ shape: sh })} />
-              ))}
-            </Group>
-
-            )}
 
             <Group
               title={classic ? "Coat and colour" : "Colour"}

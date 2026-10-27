@@ -24,11 +24,11 @@ import {
   type MascotAddon,
 } from "./addons";
 
-import { BODY_BOTTOM, FACE_FIT, bodyPath, drawFur, drawFurUnder, hexRgb } from "./body";
+import { BODY_BOTTOM, bodyPath, drawFur, drawFurUnder, hexRgb } from "./body";
 import { BODY_EXTENT, FRONT_DEPTH, drawSolidBody, solidBodyLive, solidPxPerR } from "./body-gl";
 import { faceValues, type FaceTune } from "./face-style";
 import { furVector, type FurStyle, type FurTune } from "./fur-style";
-import { DEFAULT_LOOK, type BodyShape, type HeadStyle, type MascotLook } from "./look";
+import { DEFAULT_LOOK, type HeadStyle, type MascotLook } from "./look";
 import { SCREEN_HEAD_BOTTOM, drawScreenHead, type ScreenGlyph } from "./screen-head";
 
 export type { MascotAddon } from "./addons";
@@ -269,7 +269,6 @@ export class Robo {
    * character, drawn exactly as before.
    */
   head: HeadStyle = DEFAULT_LOOK.head;
-  shape: BodyShape = DEFAULT_LOOK.shape;
   fur = DEFAULT_LOOK.fur;
   furStyle: FurStyle = DEFAULT_LOOK.furStyle;
   furTune: FurTune = DEFAULT_LOOK.furTune;
@@ -280,7 +279,7 @@ export class Robo {
   faceTune: FaceTune = DEFAULT_LOOK.faceTune;
   /** Its body drawn as a turning solid (body-gl), and what it was drawn for. */
   private solid: { canvas: HTMLCanvasElement; key: string } | null = null;
-  /** How far out its face rides as it turns, in R (before FACE_FIT's scale). */
+  /** How far out its face rides as it turns, in R. */
   private faceDepth = G.plateDepth;
   /** Its face plate is drawn into the fur as a pale patch, not over it. */
   private plushFace = false;
@@ -349,12 +348,11 @@ export class Robo {
     if (opts.look) this.setLook(opts.look);
   }
 
-  /** Puts on a whole look: wearables, shape, fur, colour and the face switches. */
+  /** Puts on a whole look: wearables, fur, colour and the face switches. */
   setLook(look: MascotLook) {
     this.addons = new Set(look.addons);
     // Looks saved before there was a choice of head have the classic one.
     this.head = look.head ?? DEFAULT_LOOK.head;
-    this.shape = look.shape;
     this.fur = look.fur;
     // Looks saved before the coat had styles have neither.
     this.furStyle = look.furStyle ?? DEFAULT_LOOK.furStyle;
@@ -664,37 +662,31 @@ export class Robo {
       x.restore();
       return;
     }
-    const body = bodyPath(this.shape, R, G.bodyRx);
+    const body = bodyPath(R, G.bodyRx);
     const pose = this.addons.size ? this.addonPose(R) : null;
     if (pose) drawAddonsBehind(x, this.addons, pose);
     const furRgb = this.fur && this.color ? hexRgb(this.color) : null;
-    // Fur and the other shapes are a solid that turns with it, drawn on the
-    // GPU (body-gl). Its own smooth round body is drawn in 2D, as it
-    // always was -- a plain ball looks the same turned -- and so is everything
-    // where WebGL2 is missing, with the 2D fur from body.
+    // Fur is a solid that turns with it, drawn on the GPU (body-gl). Its own
+    // smooth round body is drawn in 2D, as it always was -- a plain ball looks
+    // the same turned -- and so is everything where WebGL2 is missing, with
+    // the 2D fur from body.
     const m = x.getTransform();
-    const solid = this.fur || this.shape !== "round" ? this.solidBody(R * Math.hypot(m.a, m.b)) : null;
-    const fit = FACE_FIT[this.shape];
+    const solid = this.fur ? this.solidBody(R * Math.hypot(m.a, m.b)) : null;
     if (solid) {
       x.drawImage(solid, -BODY_EXTENT * R, -BODY_EXTENT * R, 2 * BODY_EXTENT * R, 2 * BODY_EXTENT * R);
-      // Its face rides on the solid's front, wherever FACE_FIT puts it.
-      this.faceDepth = this.shape === "round" ? G.plateDepth : FRONT_DEPTH / fit.scale;
-      this.plushFace = this.fur;
+      // Its face rides on the solid's front.
+      this.faceDepth = FRONT_DEPTH;
+      this.plushFace = true;
     } else {
       if (this.fur) drawFurUnder(x, body, R, furRgb);
       this.drawBody(x, body, R);
-      if (this.fur) drawFur(x, this.shape, body, R, furRgb, this.physDx);
+      if (this.fur) drawFur(x, body, R, furRgb, this.physDx);
       this.faceDepth = G.plateDepth;
       this.plushFace = false;
     }
     x.save();
-    // A turned solid's outline isn't the flat one, and the face stays on its front anyway.
-    if (!solid || this.shape === "round") x.clip(body);
-    // The face fits inside whatever shape it is: smaller, and lower in the triangle.
-    if (fit.scale !== 1 || fit.dy !== 0) {
-      x.translate(0, fit.dy * R);
-      x.scale(fit.scale, fit.scale);
-    }
+    // A turned solid's face stays on its front, so only the 2D body clips it.
+    if (!solid) x.clip(body);
     this.drawFace(x, R, pose);
     x.restore();
     if (pose) drawAddonsFront(x, this.addons, pose);
@@ -741,23 +733,21 @@ export class Robo {
     const pitch = live ? step(this.pitch * G.maxPitch) : 0;
     const params = this.fur ? furVector(this.furStyle, this.furTune) : null;
     const ft = faceValues(this.faceTune);
-    const key = `${this.shape}|${this.fur}|${this.color}|${this.facePlate}|${px}|${yaw}|${pitch}|${params?.join(",")}|${JSON.stringify(this.faceTune)}`;
+    const key = `${this.fur}|${this.color}|${this.facePlate}|${px}|${yaw}|${pitch}|${params?.join(",")}|${JSON.stringify(this.faceTune)}`;
     if (this.solid?.key === key) return this.solid.canvas;
     const canvas = this.solid?.canvas ?? document.createElement("canvas");
     // With fur, its face plate is a patch of pale fur, placed as drawFace places the plate.
-    const fit = FACE_FIT[this.shape];
     const face: [number, number, number, number] | null =
       this.fur && this.facePlate
         ? [
             Math.sin(yaw) * FRONT_DEPTH,
-            fit.dy + Math.sin(pitch) * FRONT_DEPTH + ft.lift * fit.scale,
+            Math.sin(pitch) * FRONT_DEPTH + ft.lift,
             // A little smaller than the plate: a pale muzzle, as plush toys have.
-            0.98 * G.plateRx * Math.cos(yaw) * fit.scale * ft.width,
-            0.9 * G.plateRy * Math.cos(pitch) * fit.scale * ft.height,
+            0.98 * G.plateRx * Math.cos(yaw) * ft.width,
+            0.9 * G.plateRy * Math.cos(pitch) * ft.height,
           ]
         : null;
     const look = {
-      shape: this.shape,
       fur: this.fur,
       color: this.color ? hexRgb(this.color) : null,
       face,
@@ -774,7 +764,7 @@ export class Robo {
     const k = 1 - clamp(-this.oy, 0, 0.4) * 1.2;
     const r = 0.78 * R * k;
     x.save();
-    const bottom = this.head === "screen" ? SCREEN_HEAD_BOTTOM : BODY_BOTTOM[this.shape];
+    const bottom = this.head === "screen" ? SCREEN_HEAD_BOTTOM : BODY_BOTTOM;
     x.translate(cx + this.ox * R, cy + (bottom + 0.16) * R);
     x.scale(1, 0.16);
     x.fillStyle = radial(x, 0, 0, 0, r, [
@@ -823,7 +813,7 @@ export class Robo {
     ao.addColorStop(0, rgba(AO, 0));
     ao.addColorStop(1, rgba(AO, this.fur ? 0.26 : 0.55));
     x.fillStyle = ao;
-    // Generous rectangles: some body shapes reach well past 1 R.
+    // Generous rectangles, with room to spare.
     x.fillRect(-1.6 * R, 0, 3.2 * R, 1.6 * R);
     if (this.tint > 0.01) {
       // The state's colour pools in the underside, so it reads even when small.

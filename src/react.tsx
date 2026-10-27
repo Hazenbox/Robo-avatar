@@ -28,7 +28,7 @@ export interface RoboAvatarProps extends Omit<MountOptions, "look" | "state" | "
  * returns, for emotes, pokes and anything else imperative.
  *
  * ```tsx
- * <RoboAvatar size={160} state="happy" look={{ shape: "star", fur: true }} />
+ * <RoboAvatar size={160} state="happy" look={{ fur: true }} />
  * ```
  */
 export const RoboAvatar = forwardRef<RoboHandle | null, RoboAvatarProps>(function RoboAvatar(props, ref) {

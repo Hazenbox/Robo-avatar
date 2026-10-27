@@ -24,8 +24,10 @@ describe("looks from untrusted input", () => {
   test("anything missing or wrong falls back to the default", () => {
     expect(lookOf(undefined)).toEqual(DEFAULT_LOOK);
     expect(lookOf("nonsense")).toEqual(DEFAULT_LOOK);
-    expect(lookOf({ shape: "hexagon", fur: "yes", color: "blue", addons: "visor" })).toEqual(DEFAULT_LOOK);
-    expect(lookOf({ shape: "star", fur: true, color: "#7cc4ff" })).toMatchObject({ shape: "star", fur: true, color: "#7cc4ff" });
+    expect(lookOf({ head: "toaster", fur: "yes", color: "blue", addons: "visor" })).toEqual(DEFAULT_LOOK);
+    expect(lookOf({ fur: true, color: "#7cc4ff" })).toMatchObject({ fur: true, color: "#7cc4ff" });
+    // A saved look from before the other body shapes were removed still loads.
+    expect(lookOf({ shape: "star", fur: true })).toMatchObject({ fur: true });
   });
 
   test("the head is classic unless it is a known other one", () => {
@@ -47,7 +49,7 @@ describe("looks from untrusted input", () => {
 
   test("two looks are the same when every field is", () => {
     expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK })).toBe(true);
-    expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, shape: "cube" })).toBe(false);
+    expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, fur: true })).toBe(false);
     expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, faceTune: { width: 1.2 } })).toBe(false);
   });
 });

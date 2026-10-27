@@ -6,18 +6,16 @@
  * Its face turns by sliding across the body (the original bot's yaw and pitch). On
  * its own smooth, round body that is all a turn needs -- a plain ball looks
  * the same from every side -- and that body is still drawn in 2D, exactly as
- * it always was. A coat of fur, or any other shape, has to turn with it too,
- * or it reads as a flat cutout with a face sliding over it. So those bodies
- * are drawn here, in two passes:
+ * it always was. A coat of fur has to turn with it too, or it reads as a flat
+ * cutout with a face sliding over it. So a furry body is drawn here, in two
+ * passes:
  *
- *  1. Ray-march the body as a solid: the round body is a ball; the other
- *     shapes are their outline extruded into a plush cushion, a little puffed
- *     in the middle, with rounded edges. The solid is turned so its front
+ *  1. Ray-march the body as a solid: a ball. The solid is turned so its front
  *     point lands exactly where its face does. Each pixel keeps the point of
  *     the body it sees, in the body's own coordinates.
- *  2. Shade it, lights fixed in the room. Smooth shapes get the same light
- *     and rims as it 2D body, worked out from the surface's direction (on a
- *     ball that is exactly the 2D drawing). Fur is shell texturing (Lengyel,
+ *  2. Shade it, lights fixed in the room, with the same light and rims as its
+ *     2D body, worked out from the surface's direction (on a ball that is
+ *     exactly the 2D drawing). Fur is shell texturing (Lengyel,
  *     Praun, Finkelstein and Hoppe, "Real-time fur over arbitrary surfaces",
  *     I3D 2001; the same idea as Babylon.js's FurMaterial and
  *     keaukraine/webgl-fur): 32 stacked shells of tapering hairs, gathered
@@ -31,33 +29,16 @@
  * falls back to the 2D body and fur in body.
  */
 
-import { bodyOutline } from "./body";
 import { FUR_PARAM_KEYS, furVector } from "./fur-style";
-import type { BodyShape } from "./look";
 
-/** A drawing covers [-EXTENT, EXTENT]² in R: room for the sparkle's points, turned, plus the fur. */
+/** A drawing covers [-EXTENT, EXTENT]² in R: room for the body, turned, plus the fur. */
 export const BODY_EXTENT = 1.5;
-/** The distance field covers a little more than the drawing. */
-const SDF_EXTENT = 1.7;
-const SDF_SIZE = 256;
 /** How many settings the coat has: the shader's parameter array. */
 const FUR_SLOTS = FUR_PARAM_KEYS.length;
 /** Largest drawing, in device pixels per R; bigger draws scale it up. */
 const MAX_PX_PER_R = 300;
 
-/**
- * How deep each cushion is, in R: half its depth at the outline, half its
- * depth in the middle, and the rounding of its edges. Every front sits 0.62 R
- * out, where its face plate rides (the original bot's plateDepth).
- */
-const CUSHION: Record<Exclude<BodyShape, "round">, [number, number, number]> = {
-  cube: [0.5, 0.62, 0.3],
-  triangle: [0.36, 0.62, 0.26],
-  star: [0.2, 0.62, 0.18],
-  sparkle: [0.16, 0.62, 0.14],
-};
-
-/** How far out its face rides on each shape's front, in R. */
+/** How far out its face rides on the body's front, in R. */
 export const FRONT_DEPTH = 0.62;
 
 const VERT = `#version 300 es
@@ -75,13 +56,8 @@ precision highp sampler2D;
 in vec2 vUv;
 out vec4 outColor;
 
-uniform sampler2D uSdf;    // r: signed distance to its outline, in R (positive inside); g: the same, smoothed
-uniform float uMaxD;       // the deepest point of the smoothed field
-uniform float uSdfExtent;
 uniform float uExtent;     // the drawing covers [-uExtent, uExtent]^2 in R
 uniform float uPxPerR;     // device pixels per R in this drawing
-uniform int uRound;        // 1: its round body, a ball
-uniform vec3 uCushion;     // half-depth at the outline, in the middle; edge rounding
 uniform mat3 uRot;         // body -> view
 
 // This pixel's position in R, y down like the canvas.
@@ -89,30 +65,9 @@ vec2 pixel() {
   return vec2(vUv.x * 2.0 - 1.0, 1.0 - vUv.y * 2.0) * uExtent;
 }
 
-vec2 field(vec2 p) {
-  vec2 size = vec2(textureSize(uSdf, 0));
-  vec2 st = ((p / uSdfExtent) * 0.5 + 0.5) * size - 0.5;
-  vec2 i = floor(st);
-  vec2 f = st - i;
-  ivec2 lo = ivec2(clamp(i, vec2(0.0), size - 1.0));
-  ivec2 hi = ivec2(clamp(i + 1.0, vec2(0.0), size - 1.0));
-  vec2 a = texelFetch(uSdf, ivec2(lo.x, lo.y), 0).rg;
-  vec2 b = texelFetch(uSdf, ivec2(hi.x, lo.y), 0).rg;
-  vec2 c = texelFetch(uSdf, ivec2(lo.x, hi.y), 0).rg;
-  vec2 d = texelFetch(uSdf, ivec2(hi.x, hi.y), 0).rg;
-  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}
-
 // Distance to the body's surface (negative inside), in R.
 float body(vec3 o) {
-  if (uRound == 1) return length(o / vec3(1.03, 1.0, 1.0)) - 1.0;
-  vec2 f = field(o.xy);
-  // A cushion: deeper toward the middle, so the front is softly puffed.
-  float k = clamp(f.y / uMaxD, 0.0, 1.0);
-  float hz = mix(uCushion.x, uCushion.y, sqrt(1.0 - (1.0 - k) * (1.0 - k)));
-  float r = uCushion.z;
-  vec2 w = vec2(r - f.x, abs(o.z) - hz + r);
-  return min(max(w.x, w.y), 0.0) + length(max(w, 0.0)) - r;
+  return length(o / vec3(1.03, 1.0, 1.0)) - 1.0;
 }
 
 vec3 bodyNormal(vec3 o) {
@@ -143,7 +98,7 @@ void main() {
     float d = body(o);
     if (d < best) { best = d; bestO = o; }
     if (d < 0.0006) { hit = true; break; }
-    // The cushion's distance is only an estimate where its depth changes: step short.
+    // The distance to an ellipsoid is only an estimate: step short.
     t += max(d * 0.7, 0.0015);
     if (t > 4.0) break;
   }
@@ -690,7 +645,6 @@ interface GL {
   gTex: WebGLTexture;
   fbo: WebGLFramebuffer;
   gSize: number;
-  sdf: Map<BodyShape, { tex: WebGLTexture; maxD: number }>;
   /** Fast enough to redraw every time it turns. */
   live: boolean;
 }
@@ -698,7 +652,7 @@ interface GL {
 let ctx: GL | null | undefined;
 
 const UNIFORMS = [
-  "uSdf", "uMaxD", "uSdfExtent", "uExtent", "uPxPerR", "uRound", "uCushion", "uRot",
+  "uExtent", "uPxPerR", "uRot",
   "uG", "uSize", "uColor", "uTinted", "uFur", "uF", "uHasFace", "uFace", "uFaceColor", "uFaceVelvet",
 ];
 
@@ -749,88 +703,11 @@ function setup(): GL | null {
     canvas.addEventListener("webglcontextlost", () => {
       ctx = undefined;
     });
-    ctx = { canvas, gl, gbuf, shade, gTex, fbo, gSize: 0, sdf: new Map(), live };
+    ctx = { canvas, gl, gbuf, shade, gTex, fbo, gSize: 0, live };
   } catch {
     ctx = null;
   }
   return ctx;
-}
-
-/** Signed distance from every point of the field to its outline, in R; positive inside. Row j is y. */
-function distanceField(shape: BodyShape): Float32Array {
-  const pts = bodyOutline(shape);
-  const data = new Float32Array(SDF_SIZE * SDF_SIZE);
-  const n = pts.length;
-  for (let j = 0; j < SDF_SIZE; j++) {
-    const y = ((j + 0.5) / SDF_SIZE) * 2 * SDF_EXTENT - SDF_EXTENT;
-    for (let i = 0; i < SDF_SIZE; i++) {
-      const x = ((i + 0.5) / SDF_SIZE) * 2 * SDF_EXTENT - SDF_EXTENT;
-      let best = Infinity;
-      let inside = false;
-      for (let a = 0, b = n - 1; a < n; b = a++) {
-        const [ax, ay] = pts[a];
-        const [bx, by] = pts[b];
-        if (ay > y !== by > y && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) inside = !inside;
-        const ex = bx - ax;
-        const ey = by - ay;
-        const t = Math.max(0, Math.min(1, ((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey || 1)));
-        const dx = x - (ax + ex * t);
-        const dy = y - (ay + ey * t);
-        const d = dx * dx + dy * dy;
-        if (d < best) best = d;
-      }
-      data[j * SDF_SIZE + i] = (inside ? 1 : -1) * Math.sqrt(best);
-    }
-  }
-  return data;
-}
-
-/** A box blur, run a few times: smooths the field's creases and flat top into a cushion. */
-function smoothed(field: Float32Array, radius: number, passes: number): Float32Array {
-  let src = Float32Array.from(field);
-  const tmp = new Float32Array(src.length);
-  for (let pass = 0; pass < passes; pass++) {
-    for (const horizontal of [true, false]) {
-      for (let j = 0; j < SDF_SIZE; j++) {
-        let sum = 0;
-        const at = (k: number) => {
-          const c = Math.max(0, Math.min(SDF_SIZE - 1, k));
-          return horizontal ? src[j * SDF_SIZE + c] : src[c * SDF_SIZE + j];
-        };
-        for (let k = -radius; k <= radius; k++) sum += at(k);
-        for (let i = 0; i < SDF_SIZE; i++) {
-          const idx = horizontal ? j * SDF_SIZE + i : i * SDF_SIZE + j;
-          tmp[idx] = sum / (2 * radius + 1);
-          sum += at(i + radius + 1) - at(i - radius);
-        }
-      }
-      src = Float32Array.from(tmp);
-    }
-  }
-  return src;
-}
-
-function sdfTexture(g: GL, shape: BodyShape) {
-  const hit = g.sdf.get(shape);
-  if (hit) return hit;
-  const { gl } = g;
-  const tex = gl.createTexture();
-  if (!tex) return null;
-  const sharp = distanceField(shape);
-  const soft = smoothed(sharp, 10, 3);
-  let maxD = 0.1;
-  const rg = new Float32Array(sharp.length * 2);
-  for (let i = 0; i < sharp.length; i++) {
-    rg[2 * i] = sharp[i];
-    rg[2 * i + 1] = soft[i];
-    if (soft[i] > maxD) maxD = soft[i];
-  }
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, SDF_SIZE, SDF_SIZE, 0, gl.RG, gl.FLOAT, rg);
-  nearest(gl);
-  const entry = { tex, maxD };
-  g.sdf.set(shape, entry);
-  return entry;
 }
 
 function nearest(gl: WebGL2RenderingContext) {
@@ -879,7 +756,6 @@ export function solidPxPerR(pxPerR: number): number {
 }
 
 export interface SolidLook {
-  shape: BodyShape;
   fur: boolean;
   /** Its colour as RGB, or null for its own white. */
   color: [number, number, number] | null;
@@ -916,8 +792,6 @@ export function drawSolidBody(
 ): boolean {
   const g = setup();
   if (!g) return false;
-  const sdf = sdfTexture(g, look.shape);
-  if (!sdf) return false;
   const { gl, canvas } = g;
   const size = Math.round(2 * BODY_EXTENT * pxPerR);
   if (canvas.width < size || canvas.height < size) {
@@ -938,21 +812,12 @@ export function drawSolidBody(
   }
 
   const rot = turn(yaw, pitch);
-  const round = look.shape === "round";
-  const cushion = look.shape === "round" ? [0, 0, 0] : CUSHION[look.shape];
   const common = (p: Program) => {
     gl.useProgram(p.program);
-    gl.uniform1i(p.u.uSdf, 0);
-    gl.uniform1f(p.u.uMaxD, sdf.maxD);
-    gl.uniform1f(p.u.uSdfExtent, SDF_EXTENT);
     gl.uniform1f(p.u.uExtent, BODY_EXTENT);
     gl.uniform1f(p.u.uPxPerR, pxPerR);
-    gl.uniform1i(p.u.uRound, round ? 1 : 0);
-    gl.uniform3f(p.u.uCushion, cushion[0], cushion[1], cushion[2]);
     gl.uniformMatrix3fv(p.u.uRot, false, rot);
   };
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, sdf.tex);
 
   // Pass 1, into the float target.
   gl.bindFramebuffer(gl.FRAMEBUFFER, g.fbo);

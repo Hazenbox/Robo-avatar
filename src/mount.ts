@@ -8,7 +8,7 @@
  * ```ts
  * const robo = mountRobo(document.querySelector("canvas")!, { state: "idle" });
  * robo.emote("love");
- * robo.setLook({ shape: "star", color: "#ff8fb4", addons: ["visor"] });
+ * robo.setLook({ fur: true, color: "#ff8fb4", addons: ["visor"] });
  * // later:
  * robo.destroy();
  * ```

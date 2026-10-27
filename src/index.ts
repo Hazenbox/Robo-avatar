@@ -1,16 +1,13 @@
 export { mountRobo, type MountOptions, type RoboHandle } from "./mount";
 export { Robo, MASCOT_STATES, type MascotState, type MascotEmote, type MascotAddon } from "./robo";
 export {
-  BODY_SHAPES,
   COLOR_SWATCHES,
   DEFAULT_LOOK,
   HEAD_LABEL,
   HEAD_STYLES,
-  SHAPE_LABEL,
   colorOf,
   lookOf,
   sameLook,
-  type BodyShape,
   type HeadStyle,
   type MascotLook,
 } from "./look";

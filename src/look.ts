@@ -1,5 +1,5 @@
 /**
- * Robo's whole look: what it wears, its body's shape, fur, colour, and the
+ * Robo's whole look: what it wears, its fur, colour, and the
  * two parts of its face that can be switched off.
  *
  * Every field defaults to how it has always looked -- a round white body,
@@ -10,18 +10,6 @@
 import { outfitOf, type MascotAddon } from "./addons";
 import { faceTuneOf, sameFaceTune, type FaceTune } from "./face-style";
 import { furStyleOf, furTuneOf, sameTune, type FurStyle, type FurTune } from "./fur-style";
-
-export type BodyShape = "round" | "cube" | "triangle" | "star" | "sparkle";
-
-export const BODY_SHAPES: readonly BodyShape[] = ["round", "cube", "triangle", "star", "sparkle"];
-
-export const SHAPE_LABEL: Record<BodyShape, string> = {
-  round: "Round",
-  cube: "Cuboid",
-  triangle: "Triangle",
-  star: "Star",
-  sparkle: "Sparkle",
-};
 
 /**
  * Which head it has. "classic" is the lit ball with a face plate, and every
@@ -43,7 +31,6 @@ export interface MascotLook {
   head: HeadStyle;
   /** Wearables (addons). */
   addons: MascotAddon[];
-  shape: BodyShape;
   /** A soft, hairy coat over its body. */
   fur: boolean;
   /** Which plush the coat is (fur-style). */
@@ -63,7 +50,6 @@ export interface MascotLook {
 export const DEFAULT_LOOK: MascotLook = {
   head: "classic",
   addons: [],
-  shape: "round",
   fur: false,
   furStyle: "silky",
   furTune: {},
@@ -104,7 +90,6 @@ export function lookOf(value: unknown, defaults: MascotLook = DEFAULT_LOOK): Mas
   return {
     head: HEAD_STYLES.includes(v.head as HeadStyle) ? (v.head as HeadStyle) : defaults.head,
     addons: v.addons === undefined ? defaults.addons : outfitOf(v.addons),
-    shape: BODY_SHAPES.includes(v.shape as BodyShape) ? (v.shape as BodyShape) : defaults.shape,
     fur: typeof v.fur === "boolean" ? v.fur : defaults.fur,
     furStyle: v.furStyle === undefined ? defaults.furStyle : furStyleOf(v.furStyle, defaults.furStyle),
     furTune: v.furTune === undefined ? defaults.furTune : furTuneOf(v.furTune),
@@ -118,7 +103,6 @@ export function lookOf(value: unknown, defaults: MascotLook = DEFAULT_LOOK): Mas
 export function sameLook(a: MascotLook, b: MascotLook): boolean {
   return (
     a.head === b.head &&
-    a.shape === b.shape &&
     a.fur === b.fur &&
     a.furStyle === b.furStyle &&
     sameTune(a.furTune, b.furTune) &&

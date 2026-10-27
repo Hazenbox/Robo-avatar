@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "vitest";
-import { BODY_SHAPES, DEFAULT_LOOK, MASCOT_ADDONS, MASCOT_STATES, Robo, FUR_STYLES, type MascotEmote, type MascotState } from "../src";
+import { DEFAULT_LOOK, MASCOT_ADDONS, MASCOT_STATES, Robo, FUR_STYLES, type MascotEmote, type MascotState } from "../src";
 import { fakeContext, installFakeDocument } from "./helpers";
 
 beforeAll(() => installFakeDocument());
@@ -52,13 +52,11 @@ describe("the engine draws without a browser", () => {
     }
   });
 
-  test("every body shape, bare and with fur, in every fur style", () => {
-    for (const shape of BODY_SHAPES) {
-      for (const fur of [false, true]) {
-        for (const furStyle of FUR_STYLES) {
-          const robo = new Robo({ look: { ...DEFAULT_LOOK, shape, fur, furStyle } });
-          run(robo, 0.5);
-        }
+  test("the body, bare and with fur, in every fur style", () => {
+    for (const fur of [false, true]) {
+      for (const furStyle of FUR_STYLES) {
+        const robo = new Robo({ look: { ...DEFAULT_LOOK, fur, furStyle } });
+        run(robo, 0.5);
       }
     }
   });

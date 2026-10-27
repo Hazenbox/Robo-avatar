@@ -1,33 +1,15 @@
 /**
- * Robo's body: its outline for each shape, where its face fits inside it,
- * and an optional coat of fur.
+ * Robo's body: its outline, and an optional coat of fur.
  *
- * The round body is drawn exactly as it always was (an ellipse); the other
- * shapes are opt-in. Everything is in R, its body radius, around its centre.
+ * The body is an ellipse, a touch wider than tall. Everything is in R, its
+ * body radius, around its centre.
  */
-
-import type { BodyShape } from "./look";
 
 type Pt = [number, number];
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
-/** Where its face sits in each shape: scaled to fit inside, and moved down for the triangle. */
-export const FACE_FIT: Record<BodyShape, { scale: number; dy: number }> = {
-  round: { scale: 1, dy: 0 },
-  cube: { scale: 1, dy: 0.02 },
-  triangle: { scale: 0.74, dy: 0.2 },
-  star: { scale: 0.9, dy: 0.03 },
-  sparkle: { scale: 0.84, dy: 0 },
-};
-
-/** How far each body reaches below its centre, for the floor shadow. */
-export const BODY_BOTTOM: Record<BodyShape, number> = {
-  round: 1,
-  cube: 0.93,
-  triangle: 0.86,
-  star: 0.97,
-  sparkle: 1.34,
-};
+/** How far the body reaches below its centre, for the floor shadow. */
+export const BODY_BOTTOM = 1;
 
 /* ------------------------------------------------------------------------ */
 /* Outlines, as dense closed polylines in R.                                 */
@@ -40,114 +22,22 @@ function ellipseOutline(rx: number, ry: number, n = 144): Pt[] {
   });
 }
 
-/** A polygon with every corner rounded to radius r. */
-function roundedPolygon(vertices: Pt[], r: number, perCorner = 16): Pt[] {
-  const out: Pt[] = [];
-  const n = vertices.length;
-  for (let i = 0; i < n; i++) {
-    const v = vertices[i];
-    const a = vertices[(i + n - 1) % n];
-    const b = vertices[(i + 1) % n];
-    const u1 = norm([a[0] - v[0], a[1] - v[1]]);
-    const u2 = norm([b[0] - v[0], b[1] - v[1]]);
-    const half = Math.acos(Math.max(-1, Math.min(1, u1[0] * u2[0] + u1[1] * u2[1]))) / 2;
-    const d = r / Math.tan(half);
-    const bis = norm([u1[0] + u2[0], u1[1] + u2[1]]);
-    const c: Pt = [v[0] + bis[0] * (r / Math.sin(half)), v[1] + bis[1] * (r / Math.sin(half))];
-    const t1: Pt = [v[0] + u1[0] * d, v[1] + u1[1] * d];
-    const t2: Pt = [v[0] + u2[0] * d, v[1] + u2[1] * d];
-    const a1 = Math.atan2(t1[1] - c[1], t1[0] - c[0]);
-    const a2 = Math.atan2(t2[1] - c[1], t2[0] - c[0]);
-    // The short way round the fillet.
-    let sweep = a2 - a1;
-    while (sweep > Math.PI) sweep -= Math.PI * 2;
-    while (sweep < -Math.PI) sweep += Math.PI * 2;
-    for (let k = 0; k <= perCorner; k++) {
-      const t = a1 + (sweep * k) / perCorner;
-      out.push([c[0] + Math.cos(t) * r, c[1] + Math.sin(t) * r]);
-    }
-  }
-  return out;
-}
-
-/** A round-cornered rectangle, half-width hw, half-height hh. */
-function roundedRect(hw: number, hh: number, r: number): Pt[] {
-  return roundedPolygon(
-    [
-      [-hw, -hh],
-      [hw, -hh],
-      [hw, hh],
-      [-hw, hh],
-    ],
-    r,
-  );
-}
-
-/**
- * A star drawn as a radius that swells into `points` soft tips: a puffy star
- * (low sharpness) or a pinched sparkle (high). Tip straight up.
- */
-function polarStar(points: number, rIn: number, rOut: number, sharpness: number, n = 240): Pt[] {
-  return Array.from({ length: n }, (_, i) => {
-    const t = (i / n) * Math.PI * 2 - Math.PI / 2;
-    const bump = ((1 + Math.cos(points * (t + Math.PI / 2))) / 2) ** sharpness;
-    const r = rIn + (rOut - rIn) * bump;
-    return [r * Math.cos(t), r * Math.sin(t)] as Pt;
-  });
-}
-
 function norm(v: Pt): Pt {
   const l = Math.hypot(v[0], v[1]) || 1;
   return [v[0] / l, v[1] / l];
 }
 
-const outlines = new Map<BodyShape, Pt[]>();
+let outline: Pt[] | null = null;
 
 /** The body's outline, in R. */
-export function bodyOutline(shape: BodyShape): Pt[] {
-  let o = outlines.get(shape);
-  if (!o) {
-    switch (shape) {
-      case "round":
-        o = ellipseOutline(1.03, 1);
-        break;
-      case "cube":
-        o = roundedRect(0.97, 0.93, 0.32);
-        break;
-      case "triangle":
-        o = roundedPolygon(
-          [
-            [0, -1.12],
-            [1.12, 0.86],
-            [-1.12, 0.86],
-          ],
-          0.3,
-        );
-        break;
-      case "star":
-        o = polarStar(5, 0.84, 1.2, 1.4);
-        break;
-      case "sparkle":
-        o = polarStar(4, 0.78, 1.34, 2.6);
-        break;
-    }
-    outlines.set(shape, o);
-  }
-  return o;
+export function bodyOutline(): Pt[] {
+  return (outline ??= ellipseOutline(1.03, 1));
 }
 
-/** The body's path at radius R. The round body is the same ellipse it always was. */
-export function bodyPath(shape: BodyShape, R: number, bodyRx: number): Path2D {
+/** The body's path at radius R. */
+export function bodyPath(R: number, bodyRx: number): Path2D {
   const path = new Path2D();
-  if (shape === "round") {
-    path.ellipse(0, 0, bodyRx * R, R, 0, 0, Math.PI * 2);
-    return path;
-  }
-  bodyOutline(shape).forEach(([u, v], i) => {
-    if (i === 0) path.moveTo(u * R, v * R);
-    else path.lineTo(u * R, v * R);
-  });
-  path.closePath();
+  path.ellipse(0, 0, bodyRx * R, R, 0, 0, Math.PI * 2);
   return path;
 }
 
@@ -201,14 +91,13 @@ interface Blob {
 }
 
 const MAX_FIBRES = 3000;
-const coatCache = new Map<BodyShape, { fringe: Fibre[]; blobs: Blob[]; perimeter: number }>();
+let coatCache: { fringe: Fibre[]; blobs: Blob[]; perimeter: number } | null = null;
 
 /** The fringe of fine fibres round the outline, and the soft patches over the body. */
-function coatFor(shape: BodyShape) {
-  const cached = coatCache.get(shape);
-  if (cached) return cached;
+function coatFor() {
+  if (coatCache) return coatCache;
   const rand = seeded(0x3ee7a);
-  const pts = bodyOutline(shape);
+  const pts = bodyOutline();
   const lengths: number[] = [0];
   for (let i = 1; i <= pts.length; i++) {
     const a = pts[i - 1];
@@ -254,9 +143,8 @@ function coatFor(shape: BodyShape) {
     if (!inside(pts, x, y)) continue;
     blobs.push({ x, y, r: 0.12 + rand() * 0.22, a: (rand() < 0.5 ? -1 : 1) * (0.05 + rand() * 0.06) });
   }
-  const result = { fringe, blobs, perimeter };
-  coatCache.set(shape, result);
-  return result;
+  coatCache = { fringe, blobs, perimeter };
+  return coatCache;
 }
 
 /**
@@ -334,13 +222,12 @@ export function drawFurUnder(x: Ctx, body: Path2D, R: number, color: [number, nu
 /** After the body: the pile's grain and mottling over it, then the fine fringe round it. */
 export function drawFur(
   x: Ctx,
-  shape: BodyShape,
   body: Path2D,
   R: number,
   color: [number, number, number] | null,
   sway: number,
 ) {
-  const coat = coatFor(shape);
+  const coat = coatFor();
   const px = screenR(x, R);
 
   x.save();

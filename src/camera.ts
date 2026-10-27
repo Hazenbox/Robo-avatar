@@ -28,7 +28,7 @@ export type MascotStreamHandle = {
   pulseRoom: () => void;
   /** Dress it (addons). */
   setAddons: (addons: readonly MascotAddon[]) => void;
-  /** Its whole look: wearables, shape, fur, colour, face switches (look). */
+  /** Its whole look: wearables, fur, colour, face switches (look). */
   setLook: (look: MascotLook) => void;
 };
 
