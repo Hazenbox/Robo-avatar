@@ -43,8 +43,6 @@ export interface ScreenPose {
   /** How far its mouth is open, 0…1, and whether it is talking at all. */
   mouth: number;
   talking: boolean;
-  /** A colour for the shell, or null for its own cream. */
-  color: RGB | null;
   /** Seconds, for anything that spins. */
   t: number;
 }
@@ -285,7 +283,7 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
   drawEarBehind(x, R, earL, cb);
   drawEarBehind(x, R, earR, cb);
   drawHorn(x, R, sa);
-  drawShell(x, R, p.color, sa, near);
+  drawShell(x, R, sa, near);
   drawEarInFront(x, R, near < 0 ? earL : earR, cb);
 
   // The screen rides on the front.
@@ -308,7 +306,7 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
   x.restore();
 }
 
-function drawShell(x: Ctx, R: number, color: RGB | null, sa: number, near: number) {
+function drawShell(x: Ctx, R: number, sa: number, near: number) {
   const shell = shellPath(R);
   x.fillStyle = rgba(CREAM);
   x.fill(shell);
@@ -360,14 +358,6 @@ function drawShell(x: Ctx, R: number, color: RGB | null, sa: number, near: numbe
   x.fill(shell);
   x.restore();
 
-  if (color) {
-    x.save();
-    x.clip(shell);
-    x.globalCompositeOperation = "multiply";
-    x.fillStyle = rgba(color);
-    x.fill(shell);
-    x.restore();
-  }
 }
 
 /**

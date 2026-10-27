@@ -650,7 +650,8 @@ export class Robo {
     if (this.shadow && !this.studioPose) this.drawShadow(x, cx, cy, R);
     x.save();
     x.translate(cx + this.ox * R, cy + this.oy * R);
-    this.drawGlow(x, R);
+    // The screen head has no halo of its own: its rim light is the glow.
+    if (this.head !== "screen") this.drawGlow(x, R);
 
     x.save();
     x.scale(this.sx, this.sy);
@@ -712,7 +713,6 @@ export class Robo {
       glyph,
       mouth: this.mouth,
       talking: this.cfg.mouth === "talk",
-      color: this.color ? hexRgb(this.color) : null,
       t: now(),
     });
   }

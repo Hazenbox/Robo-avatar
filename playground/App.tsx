@@ -19,7 +19,7 @@ import {
 } from "robo-avatar";
 import { FaceSettings, FurSettings, Group, Pill, Tile } from "./parts";
 import { initialLook, reactSnippet, saveLook } from "./share";
-import { createSynth, openMic, type Mic } from "./voice";
+import { createSynth } from "./voice";
 
 const STATES = Object.keys(MASCOT_STATES) as MascotState[];
 const STATE_LABEL: Record<MascotState, string> = {
@@ -102,8 +102,6 @@ export default function App() {
   const [glow, setGlow] = useState(30);
   const [shadow, setShadow] = useState(true);
   const [reduced, setReduced] = useState(false);
-  const [source, setSource] = useState<"synth" | "mic">("synth");
-  const [micError, setMicError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [feedError, setFeedError] = useState<string | null>(null);
 
@@ -116,12 +114,10 @@ export default function App() {
     if (h) handles.current.set(id, h);
     else handles.current.delete(id);
   };
-  const meter = useRef<HTMLSpanElement | null>(null);
   const video = useRef<HTMLVideoElement | null>(null);
   const feed = useRef<RoboStreamHandle | null>(null);
-  const mic = useRef<Mic | null>(null);
-  const live = useRef({ state, source });
-  live.current = { state, source };
+  const live = useRef({ state });
+  live.current = { state };
   const playTimer = useRef<number | undefined>(undefined);
 
   const choose = useCallback((s: MascotState) => {
@@ -152,15 +148,14 @@ export default function App() {
     };
   }, [choose]);
 
-  // One loop feeds the voice level to every Robo on the page.
+  // One loop feeds a made-up voice level to every Robo on the page, so Speaking and Listening move.
   useEffect(() => {
     const synth = createSynth();
     let raf = 0;
     let lastPulse = 0;
     const frame = (ms: number) => {
       raf = requestAnimationFrame(frame);
-      const level = live.current.source === "mic" && mic.current ? mic.current.level() : synth(ms / 1000);
-      if (meter.current) meter.current.style.width = `${Math.round(level * 100)}%`;
+      const level = synth(ms / 1000);
       for (const h of handles.current.values()) {
         h.setVoice(level);
         h.setRoom(level * 0.8);
@@ -200,24 +195,6 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => feed.current?.setLook(look), [look]);
-
-  const toggleMic = async (on: boolean) => {
-    if (!on) {
-      mic.current?.stop();
-      mic.current = null;
-      setSource("synth");
-      return;
-    }
-    try {
-      mic.current = await openMic();
-      setMicError(null);
-      setSource("mic");
-    } catch (e) {
-      setMicError(e instanceof Error ? e.message : "The microphone is not available");
-      setSource("synth");
-    }
-  };
-  useEffect(() => () => mic.current?.stop(), []);
 
   // Keys: 1 to 9 pick a state; L, P, S, W play an emote.
   useEffect(() => {
@@ -299,7 +276,7 @@ export default function App() {
               ))}
             </Group>
 
-            <Group title="Head" hint={classic ? undefined : "The screen head has its own face. Fur, face and wearables are for the classic head; the colour tints the shell."}>
+            <Group title="Head" hint={classic ? undefined : "The screen head has its own face, rim light and ears. Colour, fur, face and wearables are for the classic head."}>
               {HEAD_STYLES.map((h) => (
                 <Tile key={h} label={HEAD_LABEL[h]} on={look.head === h} look={thumb({ head: h, color: look.color })} onClick={() => setLook({ head: h })} />
               ))}
@@ -315,8 +292,10 @@ export default function App() {
             )}
 
 
+            {classic && (
+              <>
             <Group
-              title={classic ? "Coat and colour" : "Colour"}
+              title="Coat and colour"
               after={
                 <div className="swatches">
                   {COLOR_SWATCHES.map((c) => (
@@ -331,54 +310,37 @@ export default function App() {
                 </div>
               }
             >
-              {classic && <Tile label="Fur" on={look.fur} look={thumb({ fur: true, color: look.color, furStyle: look.furStyle, furTune: look.furTune })} onClick={() => setLook({ fur: !look.fur })} />}
+              <Tile label="Fur" on={look.fur} look={thumb({ fur: true, color: look.color, furStyle: look.furStyle, furTune: look.furTune })} onClick={() => setLook({ fur: !look.fur })} />
             </Group>
-            {classic && <FurSettings look={look} setLook={setLook} />}
+            <FurSettings look={look} setLook={setLook} />
 
-            <Group title={classic ? "Face" : "Reset"}>
-              {classic && (
-                <Tile
-                  label="Face plate"
-                  on={look.facePlate}
-                  look={thumb({ fur: look.fur, furStyle: look.furStyle, furTune: look.furTune, color: look.color, faceRing: look.faceRing, faceTune: look.faceTune })}
-                  onClick={() => setLook({ facePlate: !look.facePlate })}
-                />
-              )}
-              {classic && (
-                <Pill on={look.facePlate && look.faceRing} disabled={!look.facePlate} onClick={() => setLook({ faceRing: !look.faceRing })}>
-                  Ring round the face
-                </Pill>
-              )}
+            <Group title="Face">
+              <Tile
+                label="Face plate"
+                on={look.facePlate}
+                look={thumb({ fur: look.fur, furStyle: look.furStyle, furTune: look.furTune, color: look.color, faceRing: look.faceRing, faceTune: look.faceTune })}
+                onClick={() => setLook({ facePlate: !look.facePlate })}
+              />
+              <Pill on={look.facePlate && look.faceRing} disabled={!look.facePlate} onClick={() => setLook({ faceRing: !look.faceRing })}>
+                Ring round the face
+              </Pill>
               <Pill on={false} onClick={() => setLook({ ...DEFAULT_LOOK })}>
                 Reset everything
               </Pill>
             </Group>
-            {classic && <FaceSettings look={look} setLook={setLook} />}
-
-            <Group
-              title="Voice"
-              hint={micError ?? "Speaking moves the mouth and bars with the level; Listening lifts the arcs with it. The microphone only measures loudness: nothing is recorded or sent."}
-              after={
-                <div className="meter" aria-hidden="true">
-                  <span ref={meter} />
-                </div>
-              }
-            >
-              <Pill on={source === "synth"} onClick={() => void toggleMic(false)}>
-                Synthetic voice
-              </Pill>
-              <Pill on={source === "mic"} onClick={() => void toggleMic(true)}>
-                Microphone
-              </Pill>
-            </Group>
+            <FaceSettings look={look} setLook={setLook} />
+              </>
+            )}
 
             <Group
               title="Look"
               after={
-                <label className="glow">
-                  <span>Glow</span>
-                  <input type="range" min={0} max={100} value={glow} onChange={(e) => setGlow(Number(e.target.value))} aria-label="Glow" />
-                </label>
+                classic ? (
+                  <label className="glow">
+                    <span>Glow</span>
+                    <input type="range" min={0} max={100} value={glow} onChange={(e) => setGlow(Number(e.target.value))} aria-label="Glow" />
+                  </label>
+                ) : undefined
               }
             >
               <Pill on={shadow} onClick={() => setShadow(!shadow)}>

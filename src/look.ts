@@ -15,7 +15,7 @@ import { furStyleOf, furTuneOf, sameTune, type FurStyle, type FurTune } from "./
  * Which head it has. "classic" is the lit ball with a face plate, and every
  * setting below applies to it. "screen" is a rounded helmet with a black
  * screen for a face, a rainbow rim, a horn and ear pads (screen-head); it
- * keeps only the colour.
+ * has no colour, fur, glow or wearables.
  */
 export type HeadStyle = "classic" | "screen";
 
