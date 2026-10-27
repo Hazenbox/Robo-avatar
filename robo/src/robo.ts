@@ -716,7 +716,6 @@ export class Robo {
       tilt: this.tilt,
       swayX: this.physDx,
       swayY: this.physDy,
-      swayVX: this.physVx,
       tailX: this.tailDx,
       tailVX: this.tailVx,
       t: now() - this.t0,

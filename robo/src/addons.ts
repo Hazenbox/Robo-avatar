@@ -1,26 +1,25 @@
 /**
- * Things Robo can wear: a visor, goggles, a headset, a knitted beanie and a scarf.
+ * Things Robo can wear: a visor, goggles, a headset and a knitted scarf.
  *
  * Add-ons are strictly additive. The engine draws none of this unless an
  * add-on is switched on, so with the set empty it looks exactly as it
  * always has. One palette across the set -- graphite, Violet and a single
  * cyan accent -- so any combination reads as one outfit: clean shapes, soft
- * light, one point of glow, nothing fussy. The beanie and the scarf are knitted:
- * every stitch is drawn, so they read as wool, not plastic.
+ * light, one point of glow, nothing fussy. The scarf is knitted: every stitch
+ * is drawn, so it reads as wool, not plastic.
  *
  * Everything is drawn in the engine's own frame (body centre at the origin,
  * squash already applied) from an AddonPose the engine hands over, so the
- * add-ons turn, tilt, hop and squash with it. Soft parts (the pompom, the
- * scarf's tail) lag behind on the engine's spring.
+ * add-ons turn, tilt, hop and squash with it. Soft parts (the scarf's tail)
+ * lag behind on the engine's spring.
  */
 
-export type MascotAddon = "visor" | "goggles" | "studio" | "beanie" | "muffler";
+export type MascotAddon = "visor" | "goggles" | "studio" | "muffler";
 
 export const MASCOT_ADDONS: readonly MascotAddon[] = [
   "visor",
   "goggles",
   "studio",
-  "beanie",
   "muffler",
 ];
 
@@ -28,7 +27,6 @@ export const ADDON_LABEL: Record<MascotAddon, string> = {
   visor: "Visor",
   goggles: "Goggles",
   studio: "Headset",
-  beanie: "Beanie",
   muffler: "Scarf",
 };
 
@@ -84,8 +82,7 @@ export type AddonPose = {
   /** Spring lag of soft parts, -1…1. */
   swayX: number;
   swayY: number;
-  /** How fast the pompom is swinging, and where the scarf's tail has swung to and how fast. */
-  swayVX: number;
+  /** Where the scarf's tail has swung to, and how fast. */
   tailX: number;
   tailVX: number;
   /** Seconds, for anything that breathes. */
@@ -280,9 +277,9 @@ export function drawVisorOver(x: Ctx, p: AddonPose) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* Knitwear: the beanie and the scarf are wool. Every stitch is a small V of  */
-/* two strands, laid out row by row and column by column on the head's own    */
-/* curve, so the knit turns with it. Edges are fuzzy, as wool is.             */
+/* Knitwear: the scarf is wool. Every stitch is a small V of two strands,     */
+/* laid out row by row and column by column on the head's own curve, so the  */
+/* knit turns with it. Edges are fuzzy, as wool is.                          */
 /* ------------------------------------------------------------------------ */
 
 /** A repeatable pseudo-random number in 0…1, so the fuzz never flickers. */
@@ -325,205 +322,6 @@ function fuzz(x: Ctx, R: number, pts: readonly (readonly [number, number, number
 const WOOL_LIT = rgba(VIOLET_HI, 0.92);
 const WOOL_SHADE = rgba(VIOLET_LO, 0.7);
 const FIBRES = [rgba(VIOLET_HI, 0.6), rgba(VIOLET, 0.65), rgba(VIOLET_LO, 0.4)];
-
-/* ------------------------------------------------------------------------ */
-/* Beanie: a knitted dome, a ribbed folded cuff and a yarn pompom.            */
-/* ------------------------------------------------------------------------ */
-
-function drawBeanie(x: Ctx, p: AddonPose) {
-  const { R, a, swayX, swayY } = p;
-  const rx = 1.07 * R;
-  const ry = 1.1 * R;
-  // It sits on its head, so it goes where the head goes: as it looks right the
-  // whole hat shifts and leans that way, and as it looks down the brim comes
-  // down over the brow with its face (and lifts when it looks up).
-  x.save();
-  x.translate(p.fx * 0.28, p.fy * 0.22);
-  x.rotate(p.tilt * 0.8 + a * 0.06);
-  const cuffY = -0.5 * R + p.fy * 1.0;
-  const sag = 0.07 * R;
-  const s = clamp(cuffY / ry, -0.99, 0.99);
-  const half = (yy: number) => rx * Math.sqrt(Math.max(0, 1 - (yy / ry) ** 2));
-
-  // The dome.
-  const dome = new Path2D();
-  dome.ellipse(0, 0, rx, ry, 0, Math.PI - Math.asin(s), 2 * Math.PI + Math.asin(s));
-  dome.quadraticCurveTo(0, cuffY + sag, -half(cuffY), cuffY);
-  dome.closePath();
-
-  x.save();
-  x.shadowColor = rgba(SHADOW, 0.32);
-  x.shadowBlur = 0.07 * R;
-  x.shadowOffsetY = 0.025 * R;
-  x.fillStyle = rgba(VIOLET);
-  x.fill(dome);
-  x.restore();
-
-  x.save();
-  x.clip(dome);
-  const g = x.createRadialGradient(0.35 * R, -0.9 * R, 0, 0.35 * R, -0.9 * R, 1.55 * R);
-  g.addColorStop(0, rgba(VIOLET_HI));
-  g.addColorStop(0.5, rgba(VIOLET));
-  g.addColorStop(1, rgba(VIOLET_LO));
-  x.fillStyle = g;
-  x.fillRect(-1.3 * R, -1.3 * R, 2.6 * R, 1.3 * R);
-
-  // The knit: columns of V stitches running up meridians to the crown, set out
-  // on the dome so they narrow toward the top and turn with its head.
-  const cols = 22;
-  const rows = 11;
-  const phi0 = Math.asin(clamp(-cuffY / ry, 0, 0.99));
-  const dphi = (Math.PI / 2 - phi0) / rows;
-  for (let j = 0; j < rows; j++) {
-    const phi = phi0 + dphi * (j + 0.5);
-    const cp = Math.cos(phi);
-    for (let i = 0; i < cols; i++) {
-      const th = (i / cols) * Math.PI * 2 + a;
-      const ct = Math.cos(th);
-      if (ct < 0.05) continue;
-      const w = rx * cp * ((Math.PI * 2) / cols) * ct * 0.98;
-      if (w < 0.012 * R) continue;
-      const h = ry * cp * dphi * 1.1;
-      stitch(x, rx * cp * Math.sin(th), -ry * Math.sin(phi), w, h, Math.max(0.013 * R, 0.036 * R * Math.sqrt(ct)), WOOL_LIT, WOOL_SHADE);
-    }
-  }
-  // Round it: lit from the top left, falling into shade at its edge.
-  const sh = x.createRadialGradient(0.28 * R, -0.5 * R, 0.4 * R, 0.28 * R, -0.35 * R, 1.55 * R);
-  sh.addColorStop(0, "rgba(20,8,70,0)");
-  sh.addColorStop(1, "rgba(20,8,70,0.5)");
-  x.fillStyle = sh;
-  x.fillRect(-1.3 * R, -1.3 * R, 2.6 * R, 1.3 * R);
-  const hi = x.createRadialGradient(-0.3 * R, -0.85 * R, 0, -0.3 * R, -0.85 * R, 0.7 * R);
-  hi.addColorStop(0, "rgba(255,255,255,0.18)");
-  hi.addColorStop(1, "rgba(255,255,255,0)");
-  x.fillStyle = hi;
-  x.fillRect(-1.3 * R, -1.3 * R, 2.6 * R, 1.3 * R);
-  x.restore();
-
-  // Fuzz standing off the dome.
-  const edge: [number, number, number, number][] = [];
-  const t0 = Math.PI - Math.asin(s) + 0.1;
-  const t1 = 2 * Math.PI + Math.asin(s) - 0.1;
-  for (let i = 0; i < 110; i++) {
-    const t = t0 + ((t1 - t0) * (i + hash(i * 3.1) * 0.8)) / 110;
-    const nx = Math.cos(t) / rx;
-    const ny = Math.sin(t) / ry;
-    const n = Math.hypot(nx, ny);
-    edge.push([rx * Math.cos(t), ry * Math.sin(t), nx / n, ny / n]);
-  }
-  fuzz(x, R, edge, 100, FIBRES, 0.045);
-
-  // The cuff: a folded rib, vertical ribs round the head, plain and purl.
-  const c0 = cuffY - 0.05 * R;
-  const c1 = cuffY + 0.17 * R;
-  const xt = half(c0) + 0.02 * R;
-  const xb = half(Math.min(c1, ry * 0.99)) + 0.035 * R;
-  const xm = (xt + xb) / 2;
-  const topAt = (u: number) => c0 + (sag * (1 - u * u)) / 2;
-  const botAt = (u: number) => c1 + (1.25 * sag * (1 - u * u)) / 2;
-  const cuff = new Path2D();
-  cuff.moveTo(-xt, c0);
-  cuff.quadraticCurveTo(0, c0 + sag, xt, c0);
-  cuff.quadraticCurveTo(xt + 0.03 * R, (c0 + c1) / 2, xb, c1);
-  cuff.quadraticCurveTo(0, c1 + sag * 1.25, -xb, c1);
-  cuff.quadraticCurveTo(-xt - 0.03 * R, (c0 + c1) / 2, -xt, c0);
-  cuff.closePath();
-
-  x.save();
-  x.shadowColor = rgba(SHADOW, 0.4);
-  x.shadowBlur = 0.06 * R;
-  x.shadowOffsetY = 0.03 * R;
-  const cg = x.createLinearGradient(0, c0, 0, c1 + sag);
-  cg.addColorStop(0, rgba(VIOLET_HI));
-  cg.addColorStop(1, rgba(VIOLET));
-  x.fillStyle = cg;
-  x.fill(cuff);
-  x.restore();
-
-  x.save();
-  x.clip(cuff);
-  const ribs = 34;
-  for (let k = 0; k < ribs; k++) {
-    const th = (k / ribs) * Math.PI * 2 + a;
-    const ct = Math.cos(th);
-    if (ct < 0.04) continue;
-    const X = Math.sin(th) * xm;
-    const u = clamp(X / xt, -1, 1);
-    const y0 = topAt(u) - 0.01 * R;
-    const y1 = botAt(u) + 0.01 * R;
-    const w = xm * ((Math.PI * 2) / ribs) * ct * 0.5;
-    x.lineCap = "round";
-    x.lineWidth = Math.max(0.008 * R, w);
-    x.strokeStyle = k % 2 ? rgba(VIOLET_LO, 0.42) : rgba(VIOLET_HI, 0.55);
-    x.beginPath();
-    x.moveTo(X, y0);
-    x.lineTo(X, y1);
-    x.stroke();
-    if (k % 2 === 0) {
-      x.lineWidth = Math.max(0.004 * R, w * 0.3);
-      x.strokeStyle = "rgba(255,255,255,0.16)";
-      x.beginPath();
-      x.moveTo(X - w * 0.15, y0);
-      x.lineTo(X - w * 0.15, y1);
-      x.stroke();
-    }
-  }
-  const wrap = x.createLinearGradient(-xb, 0, xb, 0);
-  wrap.addColorStop(0, "rgba(10,0,40,0.5)");
-  wrap.addColorStop(0.25, "rgba(10,0,40,0)");
-  wrap.addColorStop(0.75, "rgba(10,0,40,0)");
-  wrap.addColorStop(1, "rgba(10,0,40,0.4)");
-  x.fillStyle = wrap;
-  x.fillRect(-1.3 * R, c0 - 0.1 * R, 2.6 * R, c1 - c0 + 0.3 * R);
-  const fold = x.createLinearGradient(0, c0, 0, c1 + sag);
-  fold.addColorStop(0, "rgba(255,255,255,0.16)");
-  fold.addColorStop(0.25, "rgba(255,255,255,0)");
-  fold.addColorStop(0.75, "rgba(10,0,40,0)");
-  fold.addColorStop(1, "rgba(10,0,40,0.3)");
-  x.fillStyle = fold;
-  x.fillRect(-1.3 * R, c0 - 0.1 * R, 2.6 * R, c1 - c0 + 0.3 * R);
-  x.restore();
-  const cuffEdge: [number, number, number, number][] = [];
-  for (let i = 0; i < 44; i++) {
-    const u = -0.94 + (1.88 * i) / 43;
-    cuffEdge.push([u * xt, topAt(u), 0, -1]);
-    cuffEdge.push([u * xb, botAt(u), 0, 1]);
-  }
-  fuzz(x, R, cuffEdge, 400, FIBRES, 0.03);
-
-  // The pompom: a ball of yarn, fibres in every direction, late to follow it.
-  const cx = swayX * 0.15 * R;
-  const cy = -ry - 0.06 * R + swayY * 0.07 * R - Math.abs(swayX) * 0.02 * R;
-  const pr = 0.155 * R;
-  // It squashes along the line it is thrown, and its fibres trail behind it.
-  const drift = clamp(p.swayVX, -6, 6) * 0.012 * R;
-  const pg = x.createRadialGradient(cx - pr * 0.3, cy - pr * 0.35, 0, cx, cy, pr);
-  pg.addColorStop(0, rgba(VIOLET_HI));
-  pg.addColorStop(0.65, rgba(VIOLET));
-  pg.addColorStop(1, rgba(VIOLET_LO));
-  x.fillStyle = pg;
-  x.beginPath();
-  x.arc(cx, cy, pr * 0.9, 0, Math.PI * 2);
-  x.fill();
-  x.lineCap = "round";
-  x.lineWidth = 0.014 * R;
-  for (let i = 0; i < 180; i++) {
-    const ang = hash(i * 1.7) * Math.PI * 2;
-    const dx = Math.cos(ang);
-    const dy = Math.sin(ang);
-    const lit = dx * -0.6 + dy * -0.8;
-    x.strokeStyle = lit > 0.3 ? rgba(VIOLET_HI, 0.8) : lit < -0.3 ? rgba(VIOLET_LO, 0.7) : rgba(VIOLET, 0.8);
-    const r0 = pr * 0.2 * hash(i + 11);
-    const r1 = pr * (0.78 + 0.34 * hash(i + 23));
-    const bend = (hash(i + 5) - 0.5) * 0.3 * pr;
-    const tip = r1 / pr;
-    x.beginPath();
-    x.moveTo(cx + dx * r0, cy + dy * r0);
-    x.quadraticCurveTo(cx + dx * (r0 + r1) / 2 - dy * bend, cy + dy * (r0 + r1) / 2 + dx * bend, cx + dx * r1 - drift * tip, cy + dy * r1);
-    x.stroke();
-  }
-  x.restore();
-}
 
 /* ------------------------------------------------------------------------ */
 /* Scarf: two chunky knitted wraps round its lower half, a tail hanging with  */
@@ -1208,15 +1006,21 @@ function drawStudioFrame(x: Ctx, p: AddonPose) {
 }
 
 function drawStudio(x: Ctx, p: AddonPose, front: boolean) {
+  // It sits on its head, so it goes where the head goes: shifting and leaning
+  // the way the face turns, and rising and falling as it looks up or down.
+  x.save();
+  x.translate(p.fx * 0.3, p.fy * 0.25);
+  x.rotate(p.tilt * 0.8 + p.a * 0.06);
   // A cup whose axis points away from the viewer is round the back of its head.
   const behind = (sd: number) => earAxis(p, sd).nz < -0.05;
   if (!front) {
     for (const sd of [-1, 1]) if (behind(sd)) drawStudioCup(x, p, sd);
-    return;
+  } else {
+    drawStudioCanopy(x, p);
+    drawStudioFrame(x, p);
+    for (const sd of [-1, 1]) if (!behind(sd)) drawStudioCup(x, p, sd);
   }
-  drawStudioCanopy(x, p);
-  drawStudioFrame(x, p);
-  for (const sd of [-1, 1]) if (!behind(sd)) drawStudioCup(x, p, sd);
+  x.restore();
 }
 
 function roundRect(x: Ctx, X: number, Y: number, W: number, H: number, r: number) {
@@ -1242,6 +1046,5 @@ export function drawAddonsBehind(x: Ctx, addons: ReadonlySet<MascotAddon>, p: Ad
 /** After the face: everything on the front of it, back to front. */
 export function drawAddonsFront(x: Ctx, addons: ReadonlySet<MascotAddon>, p: AddonPose) {
   if (addons.has("muffler")) drawMuffler(x, p);
-  if (addons.has("beanie")) drawBeanie(x, p);
   if (addons.has("studio")) drawStudio(x, p, true);
 }

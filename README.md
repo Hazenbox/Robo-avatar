@@ -60,7 +60,7 @@ A glass face that shows its work: dots while it loads, a page writing itself whi
 ### Classic
 *The friend that reacts.*
 
-A soft, fluffy ball with big feelings. Pick its colour, give it a beanie, a scarf or a headset, and it's yours.
+A soft, fluffy ball with big feelings. Pick its colour, give it a scarf, goggles or a headset, and it's yours.
 
 </td>
 </tr>
@@ -91,10 +91,10 @@ Plus six quick reactions to play any time: love, proud, surprised, wink, excited
 ## Make it yours
 
 <div align="center">
-<img src="assets/looks.gif" alt="Four Classic robots in different colours wearing a headset, a beanie, goggles and a scarf" width="100%">
+<img src="assets/looks.gif" alt="Four Classic robots in different colours wearing a headset, a scarf, goggles and a visor" width="100%">
 </div>
 
-Pick a colour. Add a knitted beanie or scarf, goggles or a headset. Tune the fur. Your design is saved right in the link, so you can send it to a teammate and they see exactly what you made.
+Pick a colour. Add a knitted scarf, goggles, a visor or a headset. Tune the fur. Your design is saved right in the link, so you can send it to a teammate and they see exactly what you made.
 
 ## Why you'll like it
 
