@@ -1,24 +1,24 @@
 /**
- * Things Robo can wear: a visor, headphones, a beanie, a muffler.
+ * Things Robo can wear: a visor, goggles, a headset, a knitted beanie and a scarf.
  *
  * Add-ons are strictly additive. The engine draws none of this unless an
  * add-on is switched on, so with the set empty it looks exactly as it
  * always has. One palette across the set -- graphite, Violet and a single
  * cyan accent -- so any combination reads as one outfit: clean shapes, soft
- * light, one point of glow, nothing fussy.
+ * light, one point of glow, nothing fussy. The beanie and the scarf are knitted:
+ * every stitch is drawn, so they read as wool, not plastic.
  *
  * Everything is drawn in the engine's own frame (body centre at the origin,
  * squash already applied) from an AddonPose the engine hands over, so the
  * add-ons turn, tilt, hop and squash with it. Soft parts (the pompom, the
- * muffler's tail) lag behind on the engine's spring.
+ * scarf's tail) lag behind on the engine's spring.
  */
 
-export type MascotAddon = "visor" | "goggles" | "headphones" | "studio" | "beanie" | "muffler";
+export type MascotAddon = "visor" | "goggles" | "studio" | "beanie" | "muffler";
 
 export const MASCOT_ADDONS: readonly MascotAddon[] = [
   "visor",
   "goggles",
-  "headphones",
   "studio",
   "beanie",
   "muffler",
@@ -27,16 +27,14 @@ export const MASCOT_ADDONS: readonly MascotAddon[] = [
 export const ADDON_LABEL: Record<MascotAddon, string> = {
   visor: "Visor",
   goggles: "Goggles",
-  headphones: "Headphones",
-  studio: "Studio headphones",
+  studio: "Headset",
   beanie: "Beanie",
-  muffler: "Muffler",
+  muffler: "Scarf",
 };
 
 /** Pieces that sit in the same place: wearing one takes the other off. */
 const RIVALS: readonly (readonly MascotAddon[])[] = [
   ["visor", "goggles"],
-  ["headphones", "studio"],
 ];
 
 /**
@@ -86,6 +84,10 @@ export type AddonPose = {
   /** Spring lag of soft parts, -1…1. */
   swayX: number;
   swayY: number;
+  /** How fast the pompom is swinging, and where the scarf's tail has swung to and how fast. */
+  swayVX: number;
+  tailX: number;
+  tailVX: number;
   /** Seconds, for anything that breathes. */
   t: number;
   /** The louder of its voice and the room, 0…1. */
@@ -137,21 +139,50 @@ export function drawVisorUnder(x: Ctx, p: AddonPose) {
   const W = VISOR.w * R * ca;
   const y = VISOR.y * R * cb;
 
-  // A slim strap round the head, wrapping darker toward its edges.
-  const sh = 0.08 * R * cb;
-  const sg = x.createLinearGradient(0, y - sh / 2, 0, y + sh / 2);
+  // A soft strap round the head: it curves as a band does, wraps darker toward
+  // its edges, and stops at the head's own outline.
+  const sh = 0.1 * R * cb;
+  const bow = 0.05 * R * cb;
+  const edgeY = (xx: number) => y - sh / 2 + bow * Math.sqrt(Math.max(0, 1 - (xx / (1.05 * R)) ** 2));
+  x.save();
+  x.beginPath();
+  x.ellipse(-p.fx, -p.fy, 1.0 * R, 0.99 * R, 0, 0, Math.PI * 2);
+  x.clip();
+  const band = new Path2D();
+  for (let i = 0; i <= 28; i++) {
+    const xx = -1.4 * R + (2.8 * R * i) / 28;
+    if (i === 0) band.moveTo(xx, edgeY(xx));
+    else band.lineTo(xx, edgeY(xx));
+  }
+  for (let i = 28; i >= 0; i--) {
+    const xx = -1.4 * R + (2.8 * R * i) / 28;
+    band.lineTo(xx, edgeY(xx) + sh);
+  }
+  band.closePath();
+  const sg = x.createLinearGradient(0, y - sh / 2, 0, y + sh / 2 + bow);
   sg.addColorStop(0, rgba(GRAPHITE_HI));
-  sg.addColorStop(0.5, rgba(GRAPHITE));
+  sg.addColorStop(0.45, rgba(GRAPHITE));
   sg.addColorStop(1, rgba(GRAPHITE_LO));
   x.fillStyle = sg;
-  x.fillRect(-1.5 * R, y - sh / 2, 3 * R, sh);
+  x.fill(band);
   const wrap = x.createLinearGradient(-1.1 * R, 0, 1.1 * R, 0);
   wrap.addColorStop(0, "rgba(0,0,0,0.6)");
   wrap.addColorStop(0.3, "rgba(0,0,0,0)");
   wrap.addColorStop(0.7, "rgba(0,0,0,0)");
   wrap.addColorStop(1, "rgba(0,0,0,0.6)");
   x.fillStyle = wrap;
-  x.fillRect(-1.5 * R, y - sh / 2, 3 * R, sh);
+  x.fill(band);
+  // A fine seam along its lit edge.
+  x.strokeStyle = "rgba(255,255,255,0.14)";
+  x.lineWidth = 0.008 * R;
+  x.beginPath();
+  for (let i = 0; i <= 28; i++) {
+    const xx = -1.4 * R + (2.8 * R * i) / 28;
+    if (i === 0) x.moveTo(xx, edgeY(xx) + 0.012 * R);
+    else x.lineTo(xx, edgeY(xx) + 0.012 * R);
+  }
+  x.stroke();
+  x.restore();
 
   // Contact shadow on the plate, then the glass.
   x.save();
@@ -249,296 +280,367 @@ export function drawVisorOver(x: Ctx, p: AddonPose) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* Headphones: a slim band over the top, two soft cups with a light ring.    */
+/* Knitwear: the beanie and the scarf are wool. Every stitch is a small V of  */
+/* two strands, laid out row by row and column by column on the head's own    */
+/* curve, so the knit turns with it. Edges are fuzzy, as wool is.             */
 /* ------------------------------------------------------------------------ */
 
-function earPoint(p: AddonPose, sd: number) {
-  const th = sd * (Math.PI / 2) + p.a;
-  return {
-    x: Math.sin(th) * 1.0 * p.R + sd * 0.05 * p.R,
-    y: -0.04 * p.R,
-    /** Toward the viewer (>0) or round the back (<0). */
-    z: Math.cos(th),
-  };
-}
+/** A repeatable pseudo-random number in 0…1, so the fuzz never flickers. */
+const hash = (i: number) => {
+  const v = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+  return v - Math.floor(v);
+};
 
-function drawEarcup(x: Ctx, p: AddonPose, sd: number) {
-  const { R } = p;
-  const e = earPoint(p, sd);
-  const w = 0.21 * R;
-  const h = 0.46 * R;
-  const X = e.x - w / 2;
-  const Y = e.y - h / 2;
-
-  // Cushion: a darker sliver on the side that meets its head.
-  x.fillStyle = rgba(GRAPHITE_LO);
-  roundRect(x, X - sd * 0.035 * R, Y + 0.03 * R, w, h - 0.06 * R, w / 2);
-  x.fill();
-
-  // Shell, lit from the top right.
-  x.save();
-  x.shadowColor = rgba(SHADOW, 0.35);
-  x.shadowBlur = 0.06 * R;
-  x.shadowOffsetY = 0.02 * R;
-  const g = x.createLinearGradient(X + w, Y, X, Y + h);
-  g.addColorStop(0, rgba(GRAPHITE_HI));
-  g.addColorStop(0.5, rgba(GRAPHITE));
-  g.addColorStop(1, rgba(GRAPHITE_LO));
-  x.fillStyle = g;
-  roundRect(x, X, Y, w, h, w / 2);
-  x.fill();
-  x.restore();
-
-  // Hairline highlight down the lit edge.
-  x.strokeStyle = "rgba(255,255,255,0.18)";
-  x.lineWidth = 0.008 * R;
-  roundRect(x, X + 0.004 * R, Y + 0.004 * R, w - 0.008 * R, h - 0.008 * R, w / 2);
-  x.stroke();
-
-  // The accent ring: dim at rest, brighter when there is sound to hear.
-  const glow = 0.35 + 0.65 * clamp(p.level, 0, 1);
-  x.save();
-  x.shadowColor = LED_GLOW;
-  x.shadowBlur = 0.06 * R * glow;
-  x.strokeStyle = rgba(ACCENT, 0.4 + 0.5 * glow);
-  x.lineWidth = 0.014 * R;
-  roundRect(x, X + w * 0.28, Y + h * 0.2, w * 0.44, h * 0.6, w * 0.22);
-  x.stroke();
-  x.restore();
-}
-
-function drawHeadband(x: Ctx, p: AddonPose) {
-  const { R } = p;
-  const L = earPoint(p, -1);
-  const Rt = earPoint(p, 1);
-  const y0 = L.y - 0.2 * R;
-  const path = () => {
-    x.beginPath();
-    x.moveTo(L.x, y0);
-    x.bezierCurveTo(L.x * 1.04, -1.33 * R, Rt.x * 1.04, -1.33 * R, Rt.x, y0);
-  };
+/** One knitted stitch: a V of two slanted strands, lit on the left and shaded on the right. */
+function stitch(x: Ctx, X: number, Y: number, w: number, h: number, lw: number, lit: string, shade: string) {
   x.lineCap = "round";
-  path();
-  x.strokeStyle = rgba(GRAPHITE);
-  x.lineWidth = 0.075 * R;
+  x.lineWidth = lw;
+  x.strokeStyle = shade;
+  x.beginPath();
+  x.moveTo(X + w / 2, Y - h / 2);
+  x.lineTo(X, Y + h / 2);
   x.stroke();
-  // The band's lit top edge.
-  x.save();
-  x.translate(0, -0.016 * R);
-  path();
-  x.strokeStyle = rgba(GRAPHITE_HI, 0.9);
-  x.lineWidth = 0.022 * R;
+  x.strokeStyle = lit;
+  x.beginPath();
+  x.moveTo(X - w / 2, Y - h / 2);
+  x.lineTo(X, Y + h / 2);
   x.stroke();
-  x.restore();
 }
 
+/** Loose fibres standing off an edge, given points on it and their outward directions. */
+function fuzz(x: Ctx, R: number, pts: readonly (readonly [number, number, number, number])[], seed: number, colors: readonly string[], len: number) {
+  x.lineCap = "round";
+  x.lineWidth = 0.011 * R;
+  pts.forEach(([px, py, nx, ny], i) => {
+    const l = len * R * (0.45 + hash(seed + i));
+    const bend = (hash(seed + i * 7.3) - 0.5) * 0.9;
+    x.strokeStyle = colors[i % colors.length];
+    x.beginPath();
+    x.moveTo(px - nx * 0.012 * R, py - ny * 0.012 * R);
+    x.lineTo(px + (nx - ny * bend) * l, py + (ny + nx * bend) * l);
+    x.stroke();
+  });
+}
+
+const WOOL_LIT = rgba(VIOLET_HI, 0.92);
+const WOOL_SHADE = rgba(VIOLET_LO, 0.7);
+const FIBRES = [rgba(VIOLET_HI, 0.6), rgba(VIOLET, 0.65), rgba(VIOLET_LO, 0.4)];
+
 /* ------------------------------------------------------------------------ */
-/* Beanie: a smooth violet knit with a folded cuff and a small pompom.       */
+/* Beanie: a knitted dome, a ribbed folded cuff and a yarn pompom.            */
 /* ------------------------------------------------------------------------ */
 
 function drawBeanie(x: Ctx, p: AddonPose) {
-  const { R, b, swayX, swayY } = p;
-  const rx = 1.06 * R;
-  const ry = 1.08 * R;
-  const cuffY = (-0.58 + Math.sin(b) * 0.25) * R;
+  const { R, a, b, swayX, swayY } = p;
+  const rx = 1.07 * R;
+  const ry = 1.1 * R;
+  const cuffY = (-0.5 + Math.sin(b) * 0.25) * R;
   const sag = 0.07 * R;
   const s = clamp(cuffY / ry, -0.99, 0.99);
   const half = (yy: number) => rx * Math.sqrt(Math.max(0, 1 - (yy / ry) ** 2));
 
-  // Dome.
+  // The dome.
   const dome = new Path2D();
   dome.ellipse(0, 0, rx, ry, 0, Math.PI - Math.asin(s), 2 * Math.PI + Math.asin(s));
   dome.quadraticCurveTo(0, cuffY + sag, -half(cuffY), cuffY);
   dome.closePath();
 
   x.save();
-  x.shadowColor = rgba(SHADOW, 0.3);
-  x.shadowBlur = 0.06 * R;
-  x.shadowOffsetY = 0.02 * R;
-  const g = x.createRadialGradient(0.38 * R, -0.95 * R, 0, 0.38 * R, -0.95 * R, 1.5 * R);
-  g.addColorStop(0, rgba(VIOLET_HI));
-  g.addColorStop(0.45, rgba(VIOLET));
-  g.addColorStop(1, rgba(VIOLET_LO));
-  x.fillStyle = g;
+  x.shadowColor = rgba(SHADOW, 0.32);
+  x.shadowBlur = 0.07 * R;
+  x.shadowOffsetY = 0.025 * R;
+  x.fillStyle = rgba(VIOLET);
   x.fill(dome);
   x.restore();
 
-  // Knit ribs, curving with the head.
   x.save();
   x.clip(dome);
-  const xc = half(cuffY);
-  for (let i = -6; i <= 6; i++) {
-    const xi = (i / 6.5) * xc;
-    x.beginPath();
-    x.moveTo(xi, cuffY + sag * (1 - (xi / xc) ** 2));
-    x.quadraticCurveTo(xi * 1.02, -0.8 * ry, xi * 0.12, -ry);
-    x.strokeStyle = "rgba(20,8,70,0.18)";
-    x.lineWidth = 0.014 * R;
-    x.stroke();
+  const g = x.createRadialGradient(0.35 * R, -0.9 * R, 0, 0.35 * R, -0.9 * R, 1.55 * R);
+  g.addColorStop(0, rgba(VIOLET_HI));
+  g.addColorStop(0.5, rgba(VIOLET));
+  g.addColorStop(1, rgba(VIOLET_LO));
+  x.fillStyle = g;
+  x.fillRect(-1.3 * R, -1.3 * R, 2.6 * R, 1.3 * R);
+
+  // The knit: columns of V stitches running up meridians to the crown, set out
+  // on the dome so they narrow toward the top and turn with its head.
+  const cols = 22;
+  const rows = 11;
+  const phi0 = Math.asin(clamp(-cuffY / ry, 0, 0.99));
+  const dphi = (Math.PI / 2 - phi0) / rows;
+  for (let j = 0; j < rows; j++) {
+    const phi = phi0 + dphi * (j + 0.5);
+    const cp = Math.cos(phi);
+    for (let i = 0; i < cols; i++) {
+      const th = (i / cols) * Math.PI * 2 + a;
+      const ct = Math.cos(th);
+      if (ct < 0.05) continue;
+      const w = rx * cp * ((Math.PI * 2) / cols) * ct * 0.98;
+      if (w < 0.012 * R) continue;
+      const h = ry * cp * dphi * 1.1;
+      stitch(x, rx * cp * Math.sin(th), -ry * Math.sin(phi), w, h, Math.max(0.013 * R, 0.036 * R * Math.sqrt(ct)), WOOL_LIT, WOOL_SHADE);
+    }
   }
-  // Darker toward the shadow side, like the body.
-  const side = x.createRadialGradient(0.35 * R, -0.2 * R, 0.8 * R, 0.35 * R, -0.2 * R, 1.5 * R);
-  side.addColorStop(0, "rgba(10,0,40,0)");
-  side.addColorStop(1, "rgba(10,0,40,0.4)");
-  x.fillStyle = side;
-  x.fillRect(-1.2 * R, -1.2 * R, 2.4 * R, 1.2 * R);
+  // Round it: lit from the top left, falling into shade at its edge.
+  const sh = x.createRadialGradient(0.28 * R, -0.5 * R, 0.4 * R, 0.28 * R, -0.35 * R, 1.55 * R);
+  sh.addColorStop(0, "rgba(20,8,70,0)");
+  sh.addColorStop(1, "rgba(20,8,70,0.5)");
+  x.fillStyle = sh;
+  x.fillRect(-1.3 * R, -1.3 * R, 2.6 * R, 1.3 * R);
+  const hi = x.createRadialGradient(-0.3 * R, -0.85 * R, 0, -0.3 * R, -0.85 * R, 0.7 * R);
+  hi.addColorStop(0, "rgba(255,255,255,0.18)");
+  hi.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = hi;
+  x.fillRect(-1.3 * R, -1.3 * R, 2.6 * R, 1.3 * R);
   x.restore();
 
-  // Cuff: a folded band, a touch lighter, sitting proud of the dome.
-  const t0 = cuffY - 0.04 * R;
-  const t1 = cuffY + 0.15 * R;
+  // Fuzz standing off the dome.
+  const edge: [number, number, number, number][] = [];
+  const t0 = Math.PI - Math.asin(s) + 0.1;
+  const t1 = 2 * Math.PI + Math.asin(s) - 0.1;
+  for (let i = 0; i < 110; i++) {
+    const t = t0 + ((t1 - t0) * (i + hash(i * 3.1) * 0.8)) / 110;
+    const nx = Math.cos(t) / rx;
+    const ny = Math.sin(t) / ry;
+    const n = Math.hypot(nx, ny);
+    edge.push([rx * Math.cos(t), ry * Math.sin(t), nx / n, ny / n]);
+  }
+  fuzz(x, R, edge, 100, FIBRES, 0.045);
+
+  // The cuff: a folded rib, vertical ribs round the head, plain and purl.
+  const c0 = cuffY - 0.05 * R;
+  const c1 = cuffY + 0.17 * R;
+  const xt = half(c0) + 0.02 * R;
+  const xb = half(Math.min(c1, ry * 0.99)) + 0.035 * R;
+  const xm = (xt + xb) / 2;
+  const topAt = (u: number) => c0 + (sag * (1 - u * u)) / 2;
+  const botAt = (u: number) => c1 + (1.25 * sag * (1 - u * u)) / 2;
   const cuff = new Path2D();
-  const xt = half(t0) + 0.02 * R;
-  const xb = half(Math.min(t1, ry * 0.99)) + 0.03 * R;
-  cuff.moveTo(-xt, t0);
-  cuff.quadraticCurveTo(0, t0 + sag, xt, t0);
-  cuff.quadraticCurveTo(xt + 0.03 * R, (t0 + t1) / 2, xb, t1);
-  cuff.quadraticCurveTo(0, t1 + sag * 1.25, -xb, t1);
-  cuff.quadraticCurveTo(-xt - 0.03 * R, (t0 + t1) / 2, -xt, t0);
+  cuff.moveTo(-xt, c0);
+  cuff.quadraticCurveTo(0, c0 + sag, xt, c0);
+  cuff.quadraticCurveTo(xt + 0.03 * R, (c0 + c1) / 2, xb, c1);
+  cuff.quadraticCurveTo(0, c1 + sag * 1.25, -xb, c1);
+  cuff.quadraticCurveTo(-xt - 0.03 * R, (c0 + c1) / 2, -xt, c0);
   cuff.closePath();
 
   x.save();
-  x.shadowColor = rgba(SHADOW, 0.35);
-  x.shadowBlur = 0.05 * R;
-  x.shadowOffsetY = 0.025 * R;
-  const cg = x.createLinearGradient(0, t0, 0, t1 + sag);
+  x.shadowColor = rgba(SHADOW, 0.4);
+  x.shadowBlur = 0.06 * R;
+  x.shadowOffsetY = 0.03 * R;
+  const cg = x.createLinearGradient(0, c0, 0, c1 + sag);
   cg.addColorStop(0, rgba(VIOLET_HI));
   cg.addColorStop(1, rgba(VIOLET));
   x.fillStyle = cg;
   x.fill(cuff);
   x.restore();
+
   x.save();
   x.clip(cuff);
-  for (let xi = -xb; xi <= xb; xi += 0.085 * R) {
+  const ribs = 34;
+  for (let k = 0; k < ribs; k++) {
+    const th = (k / ribs) * Math.PI * 2 + a;
+    const ct = Math.cos(th);
+    if (ct < 0.04) continue;
+    const X = Math.sin(th) * xm;
+    const u = clamp(X / xt, -1, 1);
+    const y0 = topAt(u) - 0.01 * R;
+    const y1 = botAt(u) + 0.01 * R;
+    const w = xm * ((Math.PI * 2) / ribs) * ct * 0.5;
+    x.lineCap = "round";
+    x.lineWidth = Math.max(0.008 * R, w);
+    x.strokeStyle = k % 2 ? rgba(VIOLET_LO, 0.42) : rgba(VIOLET_HI, 0.55);
     x.beginPath();
-    x.moveTo(xi, t0 - 0.05 * R);
-    x.lineTo(xi, t1 + sag * 1.4);
-    x.strokeStyle = "rgba(20,8,70,0.16)";
-    x.lineWidth = 0.012 * R;
+    x.moveTo(X, y0);
+    x.lineTo(X, y1);
     x.stroke();
+    if (k % 2 === 0) {
+      x.lineWidth = Math.max(0.004 * R, w * 0.3);
+      x.strokeStyle = "rgba(255,255,255,0.16)";
+      x.beginPath();
+      x.moveTo(X - w * 0.15, y0);
+      x.lineTo(X - w * 0.15, y1);
+      x.stroke();
+    }
   }
   const wrap = x.createLinearGradient(-xb, 0, xb, 0);
-  wrap.addColorStop(0, "rgba(10,0,40,0.45)");
-  wrap.addColorStop(0.25, "rgba(10,0,40,0)");
-  wrap.addColorStop(0.75, "rgba(10,0,40,0)");
-  wrap.addColorStop(1, "rgba(10,0,40,0.35)");
-  x.fillStyle = wrap;
-  x.fillRect(-1.2 * R, t0 - 0.05 * R, 2.4 * R, t1 - t0 + 0.2 * R);
-  x.restore();
-  x.beginPath();
-  x.moveTo(-xt * 0.92, t0 + 0.012 * R);
-  x.quadraticCurveTo(0, t0 + sag + 0.012 * R, xt * 0.92, t0 + 0.012 * R);
-  x.strokeStyle = "rgba(255,255,255,0.28)";
-  x.lineWidth = 0.012 * R;
-  x.lineCap = "round";
-  x.stroke();
-
-  // Pompom: small, soft, and late to follow it.
-  const px = swayX * 0.12 * R;
-  const py = -ry - 0.05 * R + swayY * 0.05 * R;
-  const pr = 0.12 * R;
-  const pg = x.createRadialGradient(px + pr * 0.35, py - pr * 0.4, 0, px, py, pr * 1.3);
-  pg.addColorStop(0, "rgb(236,230,255)");
-  pg.addColorStop(0.55, rgba(VIOLET_HI));
-  pg.addColorStop(1, rgba(VIOLET));
-  x.fillStyle = pg;
-  x.beginPath();
-  for (let i = 0; i < 14; i++) {
-    const ang = (i / 14) * Math.PI * 2;
-    x.moveTo(px + Math.cos(ang) * pr * 0.78 + pr * 0.36, py + Math.sin(ang) * pr * 0.78);
-    x.arc(px + Math.cos(ang) * pr * 0.78, py + Math.sin(ang) * pr * 0.78, pr * 0.36, 0, Math.PI * 2);
-  }
-  x.moveTo(px + pr * 0.85, py);
-  x.arc(px, py, pr * 0.85, 0, Math.PI * 2);
-  x.fill();
-}
-
-/* ------------------------------------------------------------------------ */
-/* Muffler: a violet knit collar round its lower half, its tail swaying.     */
-/* ------------------------------------------------------------------------ */
-
-function drawMuffler(x: Ctx, p: AddonPose) {
-  const { R, a, b, swayX, swayY, tilt } = p;
-  const topY = (0.56 + Math.sin(b) * 0.12) * R;
-  const T = 0.24 * R;
-  const botY = topY + T;
-  const half = (yy: number) => 1.03 * R * Math.sqrt(Math.max(0, 1 - (yy / R) ** 2)) + 0.04 * R;
-  const xt = half(topY);
-  const xb = half(botY);
-  const mid = (topY + botY) / 2;
-
-  const band = new Path2D();
-  band.moveTo(-xt, topY);
-  band.quadraticCurveTo(0, topY + 0.1 * R, xt, topY);
-  band.quadraticCurveTo(xt + 0.03 * R, mid, xb, botY);
-  band.quadraticCurveTo(0, botY + 0.12 * R, -xb, botY);
-  band.quadraticCurveTo(-xt - 0.03 * R, mid, -xt, topY);
-  band.closePath();
-
-  x.save();
-  x.shadowColor = rgba(SHADOW, 0.4);
-  x.shadowBlur = 0.07 * R;
-  x.shadowOffsetY = 0.03 * R;
-  const g = x.createLinearGradient(0, topY, 0, botY + 0.12 * R);
-  g.addColorStop(0, rgba(VIOLET_HI));
-  g.addColorStop(0.5, rgba(VIOLET));
-  g.addColorStop(1, rgba(VIOLET_LO));
-  x.fillStyle = g;
-  x.fill(band);
-  x.restore();
-
-  x.save();
-  x.clip(band);
-  // Two fine stripes following the curve: the only pattern.
-  for (const f of [0.34, 0.66]) {
-    const yy = topY + T * f;
-    x.beginPath();
-    x.moveTo(-xt, yy);
-    x.quadraticCurveTo(0, yy + 0.11 * R, xt, yy);
-    x.strokeStyle = "rgba(255,255,255,0.2)";
-    x.lineWidth = 0.018 * R;
-    x.stroke();
-  }
-  const wrap = x.createLinearGradient(-xt, 0, xt, 0);
   wrap.addColorStop(0, "rgba(10,0,40,0.5)");
   wrap.addColorStop(0.25, "rgba(10,0,40,0)");
   wrap.addColorStop(0.75, "rgba(10,0,40,0)");
   wrap.addColorStop(1, "rgba(10,0,40,0.4)");
   x.fillStyle = wrap;
-  x.fillRect(-1.2 * R, topY - 0.1 * R, 2.4 * R, T + 0.3 * R);
+  x.fillRect(-1.3 * R, c0 - 0.1 * R, 2.6 * R, c1 - c0 + 0.3 * R);
+  const fold = x.createLinearGradient(0, c0, 0, c1 + sag);
+  fold.addColorStop(0, "rgba(255,255,255,0.16)");
+  fold.addColorStop(0.25, "rgba(255,255,255,0)");
+  fold.addColorStop(0.75, "rgba(10,0,40,0)");
+  fold.addColorStop(1, "rgba(10,0,40,0.3)");
+  x.fillStyle = fold;
+  x.fillRect(-1.3 * R, c0 - 0.1 * R, 2.6 * R, c1 - c0 + 0.3 * R);
   x.restore();
-  x.beginPath();
-  x.moveTo(-xt * 0.9, topY + 0.012 * R);
-  x.quadraticCurveTo(0, topY + 0.112 * R, xt * 0.9, topY + 0.012 * R);
-  x.strokeStyle = "rgba(255,255,255,0.3)";
-  x.lineWidth = 0.012 * R;
-  x.lineCap = "round";
-  x.stroke();
+  const cuffEdge: [number, number, number, number][] = [];
+  for (let i = 0; i < 44; i++) {
+    const u = -0.94 + (1.88 * i) / 43;
+    cuffEdge.push([u * xt, topAt(u), 0, -1]);
+    cuffEdge.push([u * xb, botAt(u), 0, 1]);
+  }
+  fuzz(x, R, cuffEdge, 400, FIBRES, 0.03);
 
-  // The tail hangs from a knot at its front right, and swings when it moves.
+  // The pompom: a ball of yarn, fibres in every direction, late to follow it.
+  const cx = swayX * 0.15 * R;
+  const cy = -ry - 0.06 * R + swayY * 0.07 * R - Math.abs(swayX) * 0.02 * R;
+  const pr = 0.155 * R;
+  // It squashes along the line it is thrown, and its fibres trail behind it.
+  const drift = clamp(p.swayVX, -6, 6) * 0.012 * R;
+  const pg = x.createRadialGradient(cx - pr * 0.3, cy - pr * 0.35, 0, cx, cy, pr);
+  pg.addColorStop(0, rgba(VIOLET_HI));
+  pg.addColorStop(0.65, rgba(VIOLET));
+  pg.addColorStop(1, rgba(VIOLET_LO));
+  x.fillStyle = pg;
+  x.beginPath();
+  x.arc(cx, cy, pr * 0.9, 0, Math.PI * 2);
+  x.fill();
+  x.lineCap = "round";
+  x.lineWidth = 0.014 * R;
+  for (let i = 0; i < 180; i++) {
+    const ang = hash(i * 1.7) * Math.PI * 2;
+    const dx = Math.cos(ang);
+    const dy = Math.sin(ang);
+    const lit = dx * -0.6 + dy * -0.8;
+    x.strokeStyle = lit > 0.3 ? rgba(VIOLET_HI, 0.8) : lit < -0.3 ? rgba(VIOLET_LO, 0.7) : rgba(VIOLET, 0.8);
+    const r0 = pr * 0.2 * hash(i + 11);
+    const r1 = pr * (0.78 + 0.34 * hash(i + 23));
+    const bend = (hash(i + 5) - 0.5) * 0.3 * pr;
+    const tip = r1 / pr;
+    x.beginPath();
+    x.moveTo(cx + dx * r0, cy + dy * r0);
+    x.quadraticCurveTo(cx + dx * (r0 + r1) / 2 - dy * bend, cy + dy * (r0 + r1) / 2 + dx * bend, cx + dx * r1 - drift * tip, cy + dy * r1);
+    x.stroke();
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Scarf: two chunky knitted wraps round its lower half, a tail hanging with  */
+/* a fringe, swaying when it moves.                                           */
+/* ------------------------------------------------------------------------ */
+
+function drawMuffler(x: Ctx, p: AddonPose) {
+  const { R, a, b, swayX, swayY, tilt } = p;
+  const topY = (0.5 + Math.sin(b) * 0.12) * R;
+  const half = (yy: number) => 1.03 * R * Math.sqrt(Math.max(0, 1 - (yy / R) ** 2)) + 0.06 * R;
+
+  // One knitted wrap: a soft tube with stitches across its thickness.
+  const wrap = (y0: number, T: number, sag: number, phase: number, seed: number) => {
+    const y1 = y0 + T;
+    const xt = half(y0);
+    const xb = half(y1);
+    const xm = (xt + xb) / 2;
+    const topAt = (u: number) => y0 + (sag * (1 - u * u)) / 2;
+    const botAt = (u: number) => y1 + (1.2 * sag * (1 - u * u)) / 2;
+    const band = new Path2D();
+    band.moveTo(-xt, y0);
+    band.quadraticCurveTo(0, y0 + sag, xt, y0);
+    band.quadraticCurveTo(xt + 0.035 * R, (y0 + y1) / 2, xb, y1);
+    band.quadraticCurveTo(0, y1 + 1.2 * sag, -xb, y1);
+    band.quadraticCurveTo(-xt - 0.035 * R, (y0 + y1) / 2, -xt, y0);
+    band.closePath();
+
+    x.save();
+    x.shadowColor = rgba(SHADOW, 0.42);
+    x.shadowBlur = 0.07 * R;
+    x.shadowOffsetY = 0.03 * R;
+    const g = x.createLinearGradient(0, y0, 0, y1 + sag);
+    g.addColorStop(0, rgba(VIOLET_HI));
+    g.addColorStop(0.5, rgba(VIOLET));
+    g.addColorStop(1, rgba(VIOLET_LO));
+    x.fillStyle = g;
+    x.fill(band);
+    x.restore();
+
+    x.save();
+    x.clip(band);
+    const cols = 26;
+    const per = 3;
+    for (let c = 0; c < cols; c++) {
+      const th = (c / cols) * Math.PI * 2 + a + phase;
+      const ct = Math.cos(th);
+      if (ct < 0.05) continue;
+      const X = Math.sin(th) * xm;
+      const u = clamp(X / xt, -1, 1);
+      const w = xm * ((Math.PI * 2) / cols) * ct * 0.98;
+      if (w < 0.012 * R) continue;
+      const top = topAt(u);
+      const bot = botAt(u);
+      for (let r = 0; r < per; r++) {
+        const yy = top + ((bot - top) * (r + 0.5)) / per;
+        stitch(x, X, yy, w, ((bot - top) / per) * 1.25, Math.max(0.013 * R, 0.034 * R * Math.sqrt(ct)), WOOL_LIT, WOOL_SHADE);
+      }
+    }
+    // A rounded tube: a light along its top, a core shadow below, darker where it turns away.
+    const tube = x.createLinearGradient(0, y0, 0, y1 + sag);
+    tube.addColorStop(0, "rgba(255,255,255,0.2)");
+    tube.addColorStop(0.3, "rgba(255,255,255,0)");
+    tube.addColorStop(0.75, "rgba(10,0,40,0)");
+    tube.addColorStop(1, "rgba(10,0,40,0.38)");
+    x.fillStyle = tube;
+    x.fillRect(-1.3 * R, y0 - 0.1 * R, 2.6 * R, T + 0.3 * R);
+    const side = x.createLinearGradient(-xt, 0, xt, 0);
+    side.addColorStop(0, "rgba(10,0,40,0.5)");
+    side.addColorStop(0.25, "rgba(10,0,40,0)");
+    side.addColorStop(0.75, "rgba(10,0,40,0)");
+    side.addColorStop(1, "rgba(10,0,40,0.4)");
+    x.fillStyle = side;
+    x.fillRect(-1.3 * R, y0 - 0.1 * R, 2.6 * R, T + 0.3 * R);
+    x.restore();
+
+    const e: [number, number, number, number][] = [];
+    for (let i = 0; i < 46; i++) {
+      const u = -0.95 + (1.9 * i) / 45;
+      e.push([u * xt, topAt(u), 0, -1]);
+      e.push([u * xb, botAt(u), 0, 1]);
+    }
+    fuzz(x, R, e, seed, FIBRES, 0.032);
+  };
+
+  // The back wrap sits a little higher, the front one over it, set half a stitch round.
+  wrap(topY, 0.2 * R, 0.09 * R, 0, 200);
+  wrap(topY + 0.14 * R, 0.21 * R, 0.1 * R, 0.12, 300);
+
+  // The tail hangs from a knot at the front right. It is a soft strip on its
+  // own, heavier spring: it swings from the knot, and its free end lags behind,
+  // so it bends into a curve as it swings and straightens as it settles.
   const lon = 0.42 + a;
   if (Math.cos(lon) < 0.1) return;
   const ax = Math.sin(lon) * 0.82 * R;
-  const ay = mid + 0.05 * R;
-  const L = (0.5 + swayY * 0.05) * R;
+  const ay = topY + 0.27 * R;
+  const L = (0.52 + swayY * 0.05 - Math.abs(p.tailX) * 0.03) * R;
+  const swing = 0.08 + p.tailX * 0.55 - tilt;
+  const bend = clamp(-p.tailVX * 0.045 - p.tailX * 0.12, -0.5, 0.5);
   x.save();
   x.translate(ax, ay);
-  x.rotate(0.12 + swayX * 0.5 - tilt);
-  const w0 = 0.2 * R;
-  const w1 = 0.17 * R;
+  x.rotate(swing);
+  const w0 = 0.25 * R;
+  const w1 = 0.23 * R;
+  const N = 14;
+  // The strip's centre line, curving away from the knot more the further it goes.
+  const mid = (f: number) => bend * L * f * f * 0.55;
+  const wid = (f: number) => w0 + (w1 - w0) * f;
   const tail = new Path2D();
-  tail.moveTo(-w0 / 2, 0);
-  tail.lineTo(w0 / 2, 0);
-  tail.lineTo(w1 / 2, L - w1 * 0.3);
-  tail.quadraticCurveTo(w1 / 2, L, w1 * 0.2, L);
-  tail.lineTo(-w1 * 0.2, L);
-  tail.quadraticCurveTo(-w1 / 2, L, -w1 / 2, L - w1 * 0.3);
+  for (let i = 0; i <= N; i++) {
+    const f = i / N;
+    const px = mid(f) - wid(f) / 2;
+    if (i === 0) tail.moveTo(px, L * f);
+    else tail.lineTo(px, L * f);
+  }
+  for (let i = N; i >= 0; i--) {
+    const f = i / N;
+    tail.lineTo(mid(f) + wid(f) / 2, L * f);
+  }
   tail.closePath();
   x.save();
-  x.shadowColor = rgba(SHADOW, 0.4);
-  x.shadowBlur = 0.06 * R;
-  x.shadowOffsetX = -0.02 * R;
-  x.shadowOffsetY = 0.02 * R;
+  x.shadowColor = rgba(SHADOW, 0.42);
+  x.shadowBlur = 0.07 * R;
+  x.shadowOffsetX = -0.025 * R;
+  x.shadowOffsetY = 0.025 * R;
   const tg = x.createLinearGradient(-w0 / 2, 0, w0 / 2, 0);
   tg.addColorStop(0, rgba(VIOLET_LO));
   tg.addColorStop(0.45, rgba(VIOLET));
@@ -548,36 +650,58 @@ function drawMuffler(x: Ctx, p: AddonPose) {
   x.restore();
   x.save();
   x.clip(tail);
-  for (const f of [0.34, 0.66]) {
-    x.beginPath();
-    x.moveTo(-w0 / 2 + w0 * f, 0);
-    x.lineTo(-w1 / 2 + w1 * f, L);
-    x.strokeStyle = "rgba(255,255,255,0.2)";
-    x.lineWidth = 0.016 * R;
-    x.stroke();
+  // Knit rows down its length, two bands of a lighter yarn near the end.
+  const rowsN = 12;
+  for (let r = 0; r < rowsN; r++) {
+    const f = (r + 0.5) / rowsN;
+    const w = wid(f);
+    for (let c = 0; c < 4; c++) {
+      const X = mid(f) - w / 2 + (w * (c + 0.5)) / 4;
+      stitch(x, X, L * f, (w / 4) * 0.96, (L / rowsN) * 1.2, 0.03 * R, WOOL_LIT, WOOL_SHADE);
+    }
   }
+  for (const f of [0.74, 0.83]) {
+    x.fillStyle = "rgba(226,214,255,0.55)";
+    x.fillRect(mid(f) - w0, L * f - 0.018 * R, 2 * w0, 0.036 * R);
+  }
+  const shade = x.createLinearGradient(-w0 / 2, 0, w0 / 2, 0);
+  shade.addColorStop(0, "rgba(10,0,40,0.4)");
+  shade.addColorStop(0.35, "rgba(10,0,40,0)");
+  shade.addColorStop(0.8, "rgba(255,255,255,0.06)");
+  shade.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = shade;
+  x.fillRect(-w0 - Math.abs(mid(1)), 0, 2 * (w0 + Math.abs(mid(1))), L);
   x.restore();
-  // Fringe.
-  x.strokeStyle = rgba(VIOLET);
-  x.lineWidth = 0.016 * R;
+  // The end: a fringe of strands that hang from it and trail with its swing.
   x.lineCap = "round";
-  for (let i = 0; i < 5; i++) {
-    const fxp = -w1 * 0.36 + (i / 4) * w1 * 0.72;
+  const endX = mid(1);
+  for (let i = 0; i < 8; i++) {
+    const fxp = endX - w1 * 0.44 + (i / 7) * w1 * 0.88;
+    const trail = clamp(-p.tailVX * 0.012 + bend * 0.1, -0.06, 0.06) * R;
+    x.lineWidth = 0.024 * R;
+    x.strokeStyle = i % 2 ? rgba(VIOLET, 0.95) : rgba(VIOLET_HI, 0.95);
     x.beginPath();
     x.moveTo(fxp, L - 0.01 * R);
-    x.lineTo(fxp + swayX * 0.01 * R, L + 0.055 * R);
+    x.quadraticCurveTo(fxp + trail * 0.4, L + 0.04 * R, fxp + trail, L + 0.085 * R + hash(i) * 0.02 * R);
     x.stroke();
   }
   x.restore();
 
-  // Knot.
-  const kg = x.createRadialGradient(ax + 0.03 * R, ay - 0.05 * R, 0, ax, ay - 0.02 * R, 0.13 * R);
+  // The knot: a chunky twist of the same yarn.
+  const kg = x.createRadialGradient(ax + 0.03 * R, ay - 0.05 * R, 0, ax, ay - 0.02 * R, 0.14 * R);
   kg.addColorStop(0, rgba(VIOLET_HI));
   kg.addColorStop(1, rgba(VIOLET_LO));
+  x.save();
+  x.shadowColor = rgba(SHADOW, 0.35);
+  x.shadowBlur = 0.05 * R;
   x.fillStyle = kg;
   x.beginPath();
-  x.ellipse(ax, ay - 0.02 * R, 0.1 * R, 0.085 * R, -0.2, 0, Math.PI * 2);
+  x.ellipse(ax, ay - 0.02 * R, 0.115 * R, 0.09 * R, -0.2, 0, Math.PI * 2);
   x.fill();
+  x.restore();
+  for (let i = 0; i < 5; i++) {
+    stitch(x, ax - 0.07 * R + i * 0.035 * R, ay - 0.04 * R + (i % 2) * 0.03 * R, 0.03 * R, 0.05 * R, 0.014 * R, WOOL_LIT, WOOL_SHADE);
+  }
 }
 
 /* ------------------------------------------------------------------------ */
@@ -775,7 +899,7 @@ export function drawGogglesOver(x: Ctx, p: AddonPose) {
 }
 
 /* ------------------------------------------------------------------------ */
-/* Studio headphones: silver cups on grey mesh cushions, metal stems, and a  */
+/* Headset: silver cups on grey mesh cushions, metal stems, and a  */
 /* white headband with a mesh canopy resting on its head.                    */
 /* ------------------------------------------------------------------------ */
 
@@ -1097,9 +1221,6 @@ function roundRect(x: Ctx, X: number, Y: number, W: number, H: number, r: number
 
 /** Before the body: whatever is round the back of it. */
 export function drawAddonsBehind(x: Ctx, addons: ReadonlySet<MascotAddon>, p: AddonPose) {
-  if (addons.has("headphones")) {
-    for (const sd of [-1, 1]) if (earPoint(p, sd).z < -0.12) drawEarcup(x, p, sd);
-  }
   if (addons.has("studio")) drawStudio(x, p, false);
 }
 
@@ -1107,9 +1228,5 @@ export function drawAddonsBehind(x: Ctx, addons: ReadonlySet<MascotAddon>, p: Ad
 export function drawAddonsFront(x: Ctx, addons: ReadonlySet<MascotAddon>, p: AddonPose) {
   if (addons.has("muffler")) drawMuffler(x, p);
   if (addons.has("beanie")) drawBeanie(x, p);
-  if (addons.has("headphones")) {
-    drawHeadband(x, p);
-    for (const sd of [-1, 1]) if (earPoint(p, sd).z >= -0.12) drawEarcup(x, p, sd);
-  }
   if (addons.has("studio")) drawStudio(x, p, true);
 }

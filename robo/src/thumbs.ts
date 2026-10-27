@@ -27,7 +27,7 @@ export function lookThumb(look: MascotLook, size: number, dpr: number): HTMLCanv
     const bot = new Robo({ reduced: true, glowAmount: 0.15, shadow: false, look });
     bot.update(1 / 60);
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // Room for the widest pieces: studio headphones.
+    // Room for the widest pieces: the headset.
     bot.draw(x, size / 2, size / 2, size * 0.32);
   }
   cache.set(key, canvas);

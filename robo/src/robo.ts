@@ -348,8 +348,13 @@ export class Robo {
   private physDy = 0;
   private physVx = 0;
   private physVy = 0;
+  /** The scarf's tail: heavier than the pompom, so it swings wider and slower. */
+  private tailDx = 0;
+  private tailVx = 0;
   private prevYaw = 0;
   private prevOy = 0;
+  private prevOx = 0;
+  private prevHv = 0;
 
   constructor(
     opts: {
@@ -666,18 +671,32 @@ export class Robo {
     for (const p of this.particles) p.age += dt;
     this.particles = this.particles.filter((p) => p.age < p.life);
 
-    // Soft parts lag behind head turns and hops (a spring: stiffness 60,
-    // damping 9). Only add-ons read it.
+    // Soft parts (the pompom, the scarf's tail) are springs hung from its head.
+    // They are driven by how it moves (its speed, and above all how fast that
+    // speed changes: a jerk throws them, a steady turn lets them settle),
+    // pulled back by gravity, slowed by drag, and stepped finely enough that
+    // they overshoot and ring down as real soft things do. Only add-ons read them.
     if (dt > 0) {
-      const yawVel = (this.yaw - this.prevYaw) / dt;
+      const hv = (this.yaw * 0.9 + this.ox * 1.4 - (this.prevYaw * 0.9 + this.prevOx * 1.4)) / dt;
+      const ha = (hv - this.prevHv) / dt;
+      this.prevHv = hv;
       const oyVel = (this.oy - this.prevOy) / dt;
-      const tDx = clamp(-yawVel * 0.35 - this.tilt * 2, -1, 1);
-      const tDy = clamp(oyVel * 0.5, -1, 1);
-      this.physVx += (60 * (tDx - this.physDx) - 9 * this.physVx) * dt;
-      this.physVy += (60 * (tDy - this.physDy) - 9 * this.physVy) * dt;
-      this.physDx = clamp(this.physDx + this.physVx * dt, -1, 1);
-      this.physDy = clamp(this.physDy + this.physVy * dt, -1, 1);
+      const wind = still ? 0 : 0.035 * Math.sin(t * 1.3) + 0.02 * Math.sin(t * 2.3 + 1);
+      const tDx = clamp(-hv * 0.3 - ha * 0.012 - this.tilt * 2, -1.2, 1.2);
+      const tDy = clamp(oyVel * 0.55, -1.2, 1.2);
+      const tTail = clamp(tDx * 1.25 + wind, -1.3, 1.3);
+      const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+      const h = dt / steps;
+      for (let i = 0; i < steps; i++) {
+        this.physVx += (70 * (tDx - this.physDx) - 7 * this.physVx) * h;
+        this.physVy += (60 * (tDy - this.physDy) - 7.5 * this.physVy) * h;
+        this.tailVx += (26 * (tTail - this.tailDx) - 3.4 * this.tailVx) * h;
+        this.physDx = clamp(this.physDx + this.physVx * h, -1.3, 1.3);
+        this.physDy = clamp(this.physDy + this.physVy * h, -1.3, 1.3);
+        this.tailDx = clamp(this.tailDx + this.tailVx * h, -1.4, 1.4);
+      }
     }
+    this.prevOx = this.ox;
     this.prevYaw = this.yaw;
     this.prevOy = this.oy;
   }
@@ -697,6 +716,9 @@ export class Robo {
       tilt: this.tilt,
       swayX: this.physDx,
       swayY: this.physDy,
+      swayVX: this.physVx,
+      tailX: this.tailDx,
+      tailVX: this.tailVx,
       t: now() - this.t0,
       level: Math.max(this.voice, this.room),
     };
