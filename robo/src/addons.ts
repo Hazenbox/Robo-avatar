@@ -110,7 +110,7 @@ export const LED_GLOW = "rgba(80,220,255,0.9)";
 /* Drawn in the face-plate frame (origin at the plate, turned with it).     */
 /* ------------------------------------------------------------------------ */
 
-const VISOR = { w: 1.24, h: 0.37, y: -0.045 };
+const VISOR = { w: 1.4, h: 0.44, y: -0.045 };
 
 function visorPath(x: Ctx, R: number, ca: number, cb: number) {
   const W = VISOR.w * R * ca;
