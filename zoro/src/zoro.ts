@@ -29,6 +29,7 @@ import { faceValues, type FaceTune } from "./face-style";
 import { furVector, type FurStyle, type FurTune } from "./fur-style";
 import { DEFAULT_LOOK, type HeadStyle, type MascotLook } from "./look";
 import { SCREEN_HEAD_BOTTOM, drawScreenHead, type ScreenGlyph } from "./screen-head";
+import type { ZoroCue } from "./sound";
 
 export type { MascotAddon } from "./addons";
 
@@ -277,6 +278,8 @@ export class Zoro {
   studioPose = false;
   /** Fired by three pokes inside 1.7 s; without it it just goes dizzy. */
   onDizzy: (() => void) | null = null;
+  /** Fired on every new state, emote, poke and nod: where its sounds come from (see sound.ts). */
+  onCue: ((cue: ZoroCue) => void) | null = null;
   /*
    * The rest of its look (look). The defaults are the original
    * character, drawn exactly as before.
@@ -394,6 +397,7 @@ export class Zoro {
     if (name === this.state && !force) return;
     this.state = name;
     this.cfg = cfg;
+    this.onCue?.(name);
     // The eyes change behind a blink, so it reads as a reaction rather than a cut.
     this.blink(() => { this.eye = cfg.eye; });
 
@@ -425,6 +429,7 @@ export class Zoro {
 
   /** Three nods: its face dips, comes back, dips again. */
   private nod() {
+    this.onCue?.("nod");
     this.anim("pitch", [
       [0.85, 170, Ease.out], [-0.05, 160, Ease.inOut],
       [0.85, 170, Ease.out], [-0.05, 160, Ease.inOut],
@@ -441,6 +446,7 @@ export class Zoro {
 
   /** A short reaction on top of the current state. */
   emote(name: MascotEmote, duration = 1.8) {
+    this.onCue?.(name);
     switch (name) {
       case "love":
         this.eyeOverride = "heart";
@@ -481,6 +487,7 @@ export class Zoro {
     const n = now();
     this.pokes = this.pokes.filter((p) => n - p < 1.7);
     this.pokes.push(n);
+    this.onCue?.("poke");
     this.anim("sy", [[0.84, 70, Ease.out], [1.08, 130, Ease.out], [1, 180, Ease.inOut]]);
     this.anim("sx", [[1.12, 70, Ease.out], [0.96, 130, Ease.out], [1, 180, Ease.inOut]]);
     if (this.pokes.length >= 3) {

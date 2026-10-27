@@ -124,7 +124,47 @@ function MoonIcon() {
   );
 }
 
+function SpeakerIcon({ on }: { on: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+      {on ? <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /> : <path d="M16 9.5l5 5M21 9.5l-5 5" />}
+    </svg>
+  );
+}
+
 const THEME_KEY = "zoro-avatar:theme";
+const SOUND_KEY = "zoro-avatar:sound";
+
+interface SoundPrefs {
+  on: boolean;
+  ambient: boolean;
+  volume: number;
+}
+
+/** Sound in the playground: on with its quiet bed until the visitor says otherwise, and remembered. */
+function useSoundPrefs() {
+  const [prefs, setPrefsState] = useState<SoundPrefs>(() => {
+    const fallback = { on: true, ambient: true, volume: 50 };
+    try {
+      const saved = JSON.parse(localStorage.getItem(SOUND_KEY) ?? "null") as Partial<SoundPrefs> | null;
+      return saved ? { ...fallback, ...saved } : fallback;
+    } catch {
+      return fallback;
+    }
+  });
+  const setPrefs = (change: Partial<SoundPrefs>) =>
+    setPrefsState((p) => {
+      const next = { ...p, ...change };
+      try {
+        localStorage.setItem(SOUND_KEY, JSON.stringify(next));
+      } catch {
+        // Not saved; nothing breaks.
+      }
+      return next;
+    });
+  return [prefs, setPrefs] as const;
+}
 
 /** The page's theme: dark until the visitor picks one, and then theirs. */
 function useTheme() {
@@ -153,6 +193,8 @@ function useTheme() {
 
 export default function App() {
   const [theme, setTheme] = useTheme();
+  const [sound, setSound] = useSoundPrefs();
+  const soundOpts = useMemo(() => (sound.on ? { volume: sound.volume / 100, ambient: sound.ambient } : false), [sound]);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 8);
@@ -304,6 +346,9 @@ export default function App() {
             <a href="#sizes">Sizes</a>
             <a href="#code">Code</a>
           </nav>
+          <button type="button" className="iconBtn" onClick={() => setSound({ on: !sound.on })} aria-pressed={sound.on} aria-label={sound.on ? "Turn sound off" : "Turn sound on"} title={sound.on ? "Sound off" : "Sound on"}>
+            <SpeakerIcon on={sound.on} />
+          </button>
           <button type="button" className="iconBtn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Light mode" : "Dark mode"}>
             {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
@@ -328,6 +373,7 @@ export default function App() {
                 glow={glow / 100}
                 shadow={shadow}
                 reducedMotion={reduced ? true : "auto"}
+                sound={soundOpts}
                 label="Zoro, the animated mascot. Click it to poke it."
               />
             </div>
@@ -423,6 +469,26 @@ export default function App() {
               </Pill>
               <Pill on={reduced} onClick={() => setReduced(!reduced)}>
                 Reduced motion
+              </Pill>
+            </Group>
+
+            <Group
+              title="Sound"
+              hint="Every state, emote and poke has its own little sound, made live in the browser. Background sounds keep a quiet bed going while it works: ticks, chatter, typing, snores."
+              after={
+                sound.on ? (
+                  <label className="glow">
+                    <span>Volume</span>
+                    <input type="range" min={0} max={100} value={sound.volume} onChange={(e) => setSound({ volume: Number(e.target.value) })} aria-label="Volume" />
+                  </label>
+                ) : undefined
+              }
+            >
+              <Pill on={sound.on} onClick={() => setSound({ on: !sound.on })}>
+                Sound
+              </Pill>
+              <Pill on={sound.on && sound.ambient} disabled={!sound.on} onClick={() => setSound({ ambient: !sound.ambient })}>
+                Background sounds
               </Pill>
             </Group>
           </aside>

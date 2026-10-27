@@ -9,12 +9,14 @@
  * const zoro = mountZoro(document.querySelector("canvas")!, { state: "idle" });
  * zoro.emote("love");
  * zoro.setLook({ fur: true, color: "#ff8fb4", addons: ["visor"] });
+ * zoro.setSound({ volume: 0.4, ambient: true });
  * // later:
  * zoro.destroy();
  * ```
  */
 
 import { DEFAULT_LOOK, type MascotLook } from "./look";
+import { createZoroSound, type SoundOptions, type ZoroSound } from "./sound";
 import { Zoro, type MascotEmote, type MascotState } from "./zoro";
 
 export interface MountOptions {
@@ -38,6 +40,13 @@ export interface MountOptions {
   pokeOnClick?: boolean;
   /** The most device pixels per CSS pixel to draw at. Default 2. */
   maxPixelRatio?: number;
+  /**
+   * Little beeps and chirps for every state, emote and poke, made live with Web
+   * Audio. `true` for the defaults, or options for volume, a quiet ambient bed
+   * and your own sound files. Default false. Browsers keep it silent until the
+   * visitor has clicked or typed on the page.
+   */
+  sound?: boolean | SoundOptions;
 }
 
 export interface ZoroHandle {
@@ -57,6 +66,8 @@ export interface ZoroHandle {
   setGlow(amount: number): void;
   setShadow(on: boolean): void;
   setReducedMotion(reduced: "auto" | boolean): void;
+  /** Turns sound on (`true` or options) or off (`false`). */
+  setSound(sound: boolean | SoundOptions): void;
   /** Where to look, -1 to 1 each way, for `seconds`; overrides idle glances. */
   lookAt(x: number, y: number, seconds?: number): void;
   /** Stops the loop and removes every listener. */
@@ -78,6 +89,20 @@ export function mountZoro(canvas: HTMLCanvasElement, opts: MountOptions = {}): Z
   const zoro = new Zoro({ reduced: reduced(), glowAmount: opts.glow ?? 0.3, shadow: opts.shadow !== false, look });
   if (opts.state) zoro.setState(opts.state, true);
 
+  let sound: ZoroSound | null = null;
+  const setSound = (s: boolean | SoundOptions) => {
+    const o = s === true ? {} : s || null;
+    if (!o) {
+      sound?.destroy();
+      sound = null;
+      return;
+    }
+    if (sound) sound.set(o);
+    else sound = createZoroSound(o);
+  };
+  zoro.onCue = (cue) => sound?.cue(cue, zoro.head);
+  if (opts.sound) setSound(opts.sound);
+
   const radius = opts.radius ?? 0.3;
   const maxDpr = opts.maxPixelRatio ?? 2;
   const reach = opts.lookReach ?? 260;
@@ -94,6 +119,7 @@ export function mountZoro(canvas: HTMLCanvasElement, opts: MountOptions = {}): Z
     last = ms;
     zoro.reduced = reduced();
     zoro.update(dt);
+    sound?.tick(zoro.state, zoro.voice, zoro.head);
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     if (!w || !h) return;
@@ -153,8 +179,11 @@ export function mountZoro(canvas: HTMLCanvasElement, opts: MountOptions = {}): Z
     emote: (e, seconds) => zoro.emote(e, seconds),
     poke: () => zoro.poke(),
     setLook: (l) => {
+      const was = look;
       look = { ...DEFAULT_LOOK, ...l };
       zoro.setLook(look);
+      // Putting something on, or a new head, makes a little sound.
+      if (look.head !== was.head || look.addons.some((a) => !was.addons.includes(a))) sound?.cue("wear", look.head);
     },
     getLook: () => look,
     setVoice: (v) => {
@@ -172,10 +201,13 @@ export function mountZoro(canvas: HTMLCanvasElement, opts: MountOptions = {}): Z
     setReducedMotion: (r) => {
       reducedSetting = r;
     },
+    setSound,
     lookAt,
     destroy: () => {
       destroyed = true;
       stop();
+      setSound(false);
+      zoro.onCue = null;
       io?.disconnect();
       window.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("click", onClick);

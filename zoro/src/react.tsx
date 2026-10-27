@@ -78,6 +78,11 @@ export const ZoroAvatar = forwardRef<ZoroHandle | null, ZoroAvatarProps>(functio
   useEffect(() => {
     if (mountOpts.reducedMotion !== undefined) handle.current?.setReducedMotion(mountOpts.reducedMotion);
   }, [mountOpts.reducedMotion]);
+  // Compared by value: an options object written inline is new on every render.
+  const soundKey = JSON.stringify(mountOpts.sound ?? null, (_k, v: unknown) => (typeof AudioBuffer === "function" && v instanceof AudioBuffer ? "buffer" : v));
+  useEffect(() => {
+    if (mountOpts.sound !== undefined) handle.current?.setSound(mountOpts.sound);
+  }, [soundKey]);
 
   return (
     <canvas

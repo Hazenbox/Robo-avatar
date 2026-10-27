@@ -98,8 +98,27 @@ Pick a colour. Add a knitted scarf, goggles, a visor or a headset. Tune the fur.
 
 Soft things move like soft things: the scarf swings and settles like real wool, and the headset sits on the head and moves with it.
 
+## It sounds alive, too
+
+Every mood has its own little sound, like a friendly robot from a film. Turn it on and Zoro chirps when it starts listening, hums while it thinks, trills when it's excited and lets out a sleepy sigh when it dozes off. Poke it and it boops, a little higher each time.
+
+| When Zoro is… | You hear… |
+| --- | --- |
+| **Listening** | two quick rising blips, ears up |
+| **Thinking** | a low "hmm", then a thought popping |
+| **Loading, processing, generating** | a soft power-up, a burst of data chatter, a sparkle |
+| **Happy, proud, in love** | a bright little tune, a "ta-da", a warm "aww" |
+| **Confused, surprised, sad** | a questioning "hm?", an "oh!", a deflated "meh" |
+| **Stuck** | a low "uh-oh" |
+| **Poked, nodding, dressed up** | a boop, an "mm-hm-hm", a swish |
+
+Switch on background sounds and the busy moods keep a quiet bed going while they last: a ticking clock while loading, chatter while processing, typing (with a bell at the end of each line) while generating, beeps in time with its voice while speaking, and gentle snores while it sleeps.
+
+The Screen robot sounds digital and a touch higher; the Classic one sounds soft and round. Every sound is made live in the browser, so there are no audio files to download. Sound stays off until you turn it on, it's quiet when it plays, and the browser keeps it silent until a person has clicked or typed on the page. Prefer your own sounds? Hand Zoro any audio file for any mood (Kenney's free CC0 interface packs work well).
+
 ## Fresh from the workshop
 
+- **Sound:** a little voice for every mood, emote and poke, plus soft background sounds while it works.
 - **Four new moods for AIs at work:** loading, processing, generating, and a nod for yes.
 - **A knitted scarf** with every stitch drawn, a fringed tail, and real swing.
 - **A headset and a visor** that follow the head as it turns, tips and looks around.
@@ -108,10 +127,10 @@ Soft things move like soft things: the scarf swings and settles like real wool, 
 
 ## Why you'll like it
 
-- **Nothing to download.** No image files, no animation files. Zoro draws itself, live, at any size, crisp on every screen.
-- **Tiny.** About 45 KB, less than a single photo.
+- **Nothing to download.** No image, animation or sound files. Zoro draws itself and makes its own sounds, live, at any size, crisp on every screen.
+- **Tiny.** About 50 KB, sounds included, less than a single photo.
 - **Feels real.** Soft parts have weight: they swing, lag behind and settle, instead of snapping into place.
-- **Kind to people.** It stops when it's off screen, and calms down for anyone who asks their device for less motion.
+- **Kind to people.** It stops when it's off screen, calms down for anyone who asks their device for less motion, and stays silent unless you turn sound on.
 - **Private.** Nothing is recorded or sent anywhere.
 - **Free.** Open source, yours to use in anything.
 
@@ -125,7 +144,7 @@ import { ZoroAvatar } from "zoro-avatar/react";
 <ZoroAvatar size={64} state="thinking" />
 ```
 
-Change `state` as your AI moves along, and Zoro follows. Not a developer? Open the [playground](https://zoro-avatar.vercel.app), design your robot, and hand over the code it writes for you.
+Change `state` as your AI moves along, and Zoro follows. Add `sound` to hear it too, or `sound={{ ambient: true }}` for the background sounds. Not a developer? Open the [playground](https://zoro-avatar.vercel.app), design your robot, and hand over the code it writes for you.
 
 > Zoro isn't on npm yet. Until it is, clone this repo, run `npm install && npm run build` inside the `zoro` folder, and `npm link`.
 

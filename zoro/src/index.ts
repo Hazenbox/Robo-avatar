@@ -36,4 +36,5 @@ export {
   type FaceTune,
 } from "./face-style";
 export { lookThumb, thumbLook } from "./thumbs";
+export { CUES as SOUND_CUES, renderZoroCue, type SoundOptions, type ZoroCue } from "./sound";
 export { createMascotMediaStream as createZoroMediaStream, type MascotStreamHandle as ZoroStreamHandle } from "./camera";
