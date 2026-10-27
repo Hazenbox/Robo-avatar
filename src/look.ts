@@ -2,9 +2,9 @@
  * Robo's whole look: what it wears, its fur, colour, and the
  * two parts of its face that can be switched off.
  *
- * Every field defaults to how it has always looked -- a round white body,
- * bare, with its face plate and its ring -- so a look of all defaults draws
- * exactly the original character. Everything else is opt-in.
+ * The default is a round, furry, sky-blue Robo, bare, with its face plate
+ * and its ring. Switch the fur off and pick "Original white" (a null colour)
+ * for the smooth white original. Everything else is opt-in.
  */
 
 import { outfitOf, type MascotAddon } from "./addons";
@@ -50,10 +50,10 @@ export interface MascotLook {
 export const DEFAULT_LOOK: MascotLook = {
   head: "classic",
   addons: [],
-  fur: false,
+  fur: true,
   furStyle: "silky",
   furTune: {},
-  color: null,
+  color: "#7cc4ff",
   facePlate: true,
   faceRing: true,
   faceTune: {},
@@ -93,7 +93,8 @@ export function lookOf(value: unknown, defaults: MascotLook = DEFAULT_LOOK): Mas
     fur: typeof v.fur === "boolean" ? v.fur : defaults.fur,
     furStyle: v.furStyle === undefined ? defaults.furStyle : furStyleOf(v.furStyle, defaults.furStyle),
     furTune: v.furTune === undefined ? defaults.furTune : furTuneOf(v.furTune),
-    color: v.color === undefined ? defaults.color : colorOf(v.color),
+    // null is a real choice (the original white); anything else that isn't a colour is the default.
+    color: v.color === undefined ? defaults.color : v.color === null ? null : (colorOf(v.color) ?? defaults.color),
     facePlate: typeof v.facePlate === "boolean" ? v.facePlate : defaults.facePlate,
     faceRing: typeof v.faceRing === "boolean" ? v.faceRing : defaults.faceRing,
     faceTune: v.faceTune === undefined ? defaults.faceTune : faceTuneOf(v.faceTune),

@@ -26,6 +26,10 @@ describe("looks from untrusted input", () => {
     expect(lookOf("nonsense")).toEqual(DEFAULT_LOOK);
     expect(lookOf({ head: "toaster", fur: "yes", color: "blue", addons: "visor" })).toEqual(DEFAULT_LOOK);
     expect(lookOf({ fur: true, color: "#7cc4ff" })).toMatchObject({ fur: true, color: "#7cc4ff" });
+    // The default is furry sky blue; an explicit null colour is the original white.
+    expect(DEFAULT_LOOK).toMatchObject({ fur: true, color: "#7cc4ff" });
+    expect(lookOf({ color: null }).color).toBeNull();
+    expect(lookOf({ fur: false }).fur).toBe(false);
     // A saved look from before the other body shapes were removed still loads.
     expect(lookOf({ shape: "star", fur: true })).toMatchObject({ fur: true });
   });
@@ -49,7 +53,7 @@ describe("looks from untrusted input", () => {
 
   test("two looks are the same when every field is", () => {
     expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK })).toBe(true);
-    expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, fur: true })).toBe(false);
+    expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, fur: false })).toBe(false);
     expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, faceTune: { width: 1.2 } })).toBe(false);
   });
 });

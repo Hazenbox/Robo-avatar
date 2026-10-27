@@ -1,6 +1,6 @@
 import { DEFAULT_LOOK, lookOf, sameLook, type MascotLook } from "robo-avatar";
 
-const KEY = "robo-avatar:look";
+const KEY = "robo-avatar:look:v2";
 
 const toB64 = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const fromB64 = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
