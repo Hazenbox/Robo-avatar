@@ -331,10 +331,16 @@ const FIBRES = [rgba(VIOLET_HI, 0.6), rgba(VIOLET, 0.65), rgba(VIOLET_LO, 0.4)];
 /* ------------------------------------------------------------------------ */
 
 function drawBeanie(x: Ctx, p: AddonPose) {
-  const { R, a, b, swayX, swayY } = p;
+  const { R, a, swayX, swayY } = p;
   const rx = 1.07 * R;
   const ry = 1.1 * R;
-  const cuffY = (-0.5 + Math.sin(b) * 0.25) * R;
+  // It sits on its head, so it goes where the head goes: as it looks right the
+  // whole hat shifts and leans that way, and as it looks down the brim comes
+  // down over the brow with its face (and lifts when it looks up).
+  x.save();
+  x.translate(p.fx * 0.28, p.fy * 0.22);
+  x.rotate(p.tilt * 0.8 + a * 0.06);
+  const cuffY = -0.5 * R + p.fy * 1.0;
   const sag = 0.07 * R;
   const s = clamp(cuffY / ry, -0.99, 0.99);
   const half = (yy: number) => rx * Math.sqrt(Math.max(0, 1 - (yy / ry) ** 2));
@@ -516,6 +522,7 @@ function drawBeanie(x: Ctx, p: AddonPose) {
     x.quadraticCurveTo(cx + dx * (r0 + r1) / 2 - dy * bend, cy + dy * (r0 + r1) / 2 + dx * bend, cx + dx * r1 - drift * tip, cy + dy * r1);
     x.stroke();
   }
+  x.restore();
 }
 
 /* ------------------------------------------------------------------------ */
@@ -524,8 +531,12 @@ function drawBeanie(x: Ctx, p: AddonPose) {
 /* ------------------------------------------------------------------------ */
 
 function drawMuffler(x: Ctx, p: AddonPose) {
-  const { R, a, b, swayX, swayY, tilt } = p;
-  const topY = (0.5 + Math.sin(b) * 0.12) * R;
+  const { R, a, swayY, tilt } = p;
+  // It follows its head a little: the wraps shift toward where it looks and
+  // rise and fall with its chin.
+  const topY = 0.5 * R + p.fy * 0.5;
+  x.save();
+  x.translate(p.fx * 0.2, 0);
   const half = (yy: number) => 1.03 * R * Math.sqrt(Math.max(0, 1 - (yy / R) ** 2)) + 0.06 * R;
 
   // One knitted wrap: a soft tube with stitches across its thickness.
@@ -609,7 +620,10 @@ function drawMuffler(x: Ctx, p: AddonPose) {
   // own, heavier spring: it swings from the knot, and its free end lags behind,
   // so it bends into a curve as it swings and straightens as it settles.
   const lon = 0.42 + a;
-  if (Math.cos(lon) < 0.1) return;
+  if (Math.cos(lon) < 0.1) {
+    x.restore();
+    return;
+  }
   const ax = Math.sin(lon) * 0.82 * R;
   const ay = topY + 0.27 * R;
   const L = (0.52 + swayY * 0.05 - Math.abs(p.tailX) * 0.03) * R;
@@ -702,6 +716,7 @@ function drawMuffler(x: Ctx, p: AddonPose) {
   for (let i = 0; i < 5; i++) {
     stitch(x, ax - 0.07 * R + i * 0.035 * R, ay - 0.04 * R + (i % 2) * 0.03 * R, 0.03 * R, 0.05 * R, 0.014 * R, WOOL_LIT, WOOL_SHADE);
   }
+  x.restore();
 }
 
 /* ------------------------------------------------------------------------ */
