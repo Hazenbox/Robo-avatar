@@ -22,11 +22,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: robo/package-lock.json
       - run: npm ci
+        working-directory: robo
       - run: npm run build:playground
+        working-directory: robo
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: playground-dist
+          path: robo/playground-dist
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build:playground",
-  "outputDirectory": "playground-dist",
-  "installCommand": "npm ci"
+  "installCommand": "npm --prefix robo ci",
+  "buildCommand": "npm --prefix robo run build:playground",
+  "outputDirectory": "robo/playground-dist"
 }

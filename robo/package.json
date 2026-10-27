@@ -5,7 +5,7 @@
   "keywords": ["mascot", "avatar", "robot", "canvas", "webgl", "animation", "react"],
   "license": "MIT",
   "type": "module",
-  "repository": { "type": "git", "url": "git+https://github.com/Hazenbox/Robo-avatar.git" },
+  "repository": { "type": "git", "url": "git+https://github.com/Hazenbox/Robo-avatar.git", "directory": "robo" },
   "bugs": { "url": "https://github.com/Hazenbox/Robo-avatar/issues" },
   "homepage": "https://github.com/Hazenbox/Robo-avatar#readme",
   "sideEffects": false,
