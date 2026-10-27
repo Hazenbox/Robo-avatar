@@ -337,6 +337,10 @@ export class Robo {
   private glance: [number, number] = [0, 0];
   private lastAmbient = 0;
   private lastSpark = 0;
+  /** The screen head's rim light: where its colours sit, how fast they flow, how bright. */
+  private rimSpin = 0;
+  private rimSpeed = 0;
+  private rimLevel = 1;
   private nextNod = 0;
   private pokes: number[] = [];
 
@@ -637,7 +641,20 @@ export class Robo {
       this.nod();
       this.nextNod = n + 2.4;
     }
-    if (this.state === "generating" && n - this.lastSpark > 0.32) {
+    // The rim's colours flow round while it processes, faster while it generates;
+    // it breathes brighter while generating, lifts with the room while listening,
+    // and dims while it sleeps.
+    const speed = this.state === "processing" ? 1.5 : this.state === "generating" ? 3.4 : 0;
+    this.rimSpeed += (speed - this.rimSpeed) * (1 - Math.pow(0.02, dt));
+    if (!still) this.rimSpin = (this.rimSpin + this.rimSpeed * dt) % TAU;
+    const level =
+      this.state === "generating" ? 1.15 + 0.2 * Math.sin(t * 4.2)
+      : this.state === "listening" ? 1 + this.room * 0.6
+      : this.state === "sleeping" ? 0.45
+      : 1;
+    this.rimLevel += (level - this.rimLevel) * (1 - Math.pow(0.01, dt));
+
+    if (this.state === "generating" && this.head === "classic" && n - this.lastSpark > 0.32) {
       this.lastSpark = n;
       this.emit("spark", 2);
     }
@@ -698,10 +715,9 @@ export class Robo {
     x.save();
     x.scale(this.sx, this.sy);
     if (this.head === "screen") {
+      // Everything it shows is on its screen and its rim: nothing floats round it.
       this.drawScreen(x, R);
       x.restore();
-      this.drawProps(x, R);
-      this.drawParticles(x, R);
       x.restore();
       return;
     }
@@ -744,7 +760,9 @@ export class Robo {
   private drawScreen(x: Ctx, R: number) {
     const eye = this.currentEye();
     // Thinking has a face of its own on the screen; elsewhere it shares the engine's eyes.
-    const glyph: ScreenGlyph = eye === "pill" && this.state === "thinking" ? "think" : eye;
+    const glyph: ScreenGlyph =
+      this.state === "loading" ? "loading" : eye === "pill" && this.state === "thinking" ? "think" : eye;
+    const t = now() - this.t0;
     drawScreenHead(x, R, {
       yaw: this.yaw,
       pitch: this.pitch,
@@ -756,6 +774,11 @@ export class Robo {
       mouth: this.mouth,
       talking: this.cfg.mouth === "talk",
       t: now(),
+      rim: {
+        spin: this.rimSpin,
+        chase: this.state === "loading" ? t * 3.8 : null,
+        level: this.rimLevel,
+      },
     });
   }
 

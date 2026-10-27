@@ -27,7 +27,17 @@ type RGB = [number, number, number];
 /** What the screen can show. Most are the engine's eyes; "think" is the screen's own. */
 export type ScreenGlyph =
   | "pill" | "wide" | "happy" | "closed" | "half" | "x" | "spiral" | "heart" | "star" | "wink"
-  | "excited" | "confused" | "think";
+  | "excited" | "confused" | "think" | "loading";
+
+/** How the rim light behaves right now. */
+export interface RimLight {
+  /** Where the colours start round the ring, in radians: turn it and the colours flow. */
+  spin: number;
+  /** Loading: the angle of a bright comet running round a dimmed ring; null for none. */
+  chase: number | null;
+  /** Brightness, 1 at rest. */
+  level: number;
+}
 
 export interface ScreenPose {
   /** Where it faces, -1…1. */
@@ -45,6 +55,7 @@ export interface ScreenPose {
   talking: boolean;
   /** Seconds, for anything that spins. */
   t: number;
+  rim: RimLight;
 }
 
 const TAU = Math.PI * 2;
@@ -90,7 +101,7 @@ const S = {
   /** Ear pads: centre out from the middle, how far they stand proud of the shell, their face side-on, height, drop. */
   earOut: 1.39,
   earT: 0.36,
-  earN: 2.5,
+  earN: 2.3,
   earD: 0.64,
   earFaceH: 0.87,
   earH: 0.75,
@@ -247,9 +258,44 @@ function innerShade(x: Ctx, shape: Path2D, R: number, color: string, blur: numbe
   x.restore();
 }
 
-function rimStyle(x: Ctx, cx: number, cy: number, hw: number): CanvasGradient {
+/** The rim's colour at a fraction of the way round, clockwise from the right. */
+function rimColorAt(f: number): RGB {
+  const u = ((f % 1) + 1) % 1;
+  for (let i = 1; i < RIM.length; i++) {
+    const [o1, c1] = RIM[i];
+    const [o0, c0] = RIM[i - 1];
+    if (u <= o1) {
+      const t = (u - o0) / Math.max(1e-6, o1 - o0);
+      return [c0[0] + (c1[0] - c0[0]) * t, c0[1] + (c1[1] - c0[1]) * t, c0[2] + (c1[2] - c0[2]) * t];
+    }
+  }
+  return RIM[RIM.length - 1][1];
+}
+
+/**
+ * The rim's colours, shown only along a comet: bright at its head (`chase`,
+ * in radians), fading smoothly over its tail. Null where conic gradients are missing.
+ */
+function cometStyle(x: Ctx, cx: number, cy: number, spin: number, chase: number): CanvasGradient | null {
+  if (!("createConicGradient" in x && typeof x.createConicGradient === "function")) return null;
+  const g = x.createConicGradient(0, cx, cy);
+  const tail = 2.2;
+  const lead = 0.12;
+  const n = 96;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * TAU;
+    const behind = (((chase - a) % TAU) + TAU) % TAU;
+    let alpha = 0;
+    if (behind < tail) alpha = Math.pow(1 - behind / tail, 1.8);
+    else if (behind > TAU - lead) alpha = (behind - (TAU - lead)) / lead;
+    g.addColorStop(i / n, rgba(rimColorAt((a - spin) / TAU), alpha));
+  }
+  return g;
+}
+
+function rimStyle(x: Ctx, cx: number, cy: number, hw: number, spin = 0): CanvasGradient {
   if ("createConicGradient" in x && typeof x.createConicGradient === "function") {
-    const g = x.createConicGradient(0, cx, cy);
+    const g = x.createConicGradient(spin, cx, cy);
     for (const [o, c] of RIM) g.addColorStop(o, rgba(c));
     return g;
   }
@@ -284,6 +330,7 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
   drawEarBehind(x, R, earR, cb);
   drawHorn(x, R, sa);
   drawShell(x, R, sa, near);
+  drawHornShadow(x, R, sa, shellPath(R));
   drawEarInFront(x, R, near < 0 ? earL : earR, cb);
 
   // The screen rides on the front.
@@ -292,7 +339,7 @@ export function drawScreenHead(x: Ctx, R0: number, p: ScreenPose) {
   const hw = S.sw * R * ca;
   const hh = S.sh * R * cb;
   const glass = screenPath(fx, fy, hw, hh, 0);
-  drawScreen(x, R, glass, fx, fy, hw, hh, ca, cb);
+  drawScreen(x, R, glass, fx, fy, hw, hh, ca, cb, p.rim);
 
   x.save();
   x.clip(glass);
@@ -382,31 +429,59 @@ function drawHorn(x: Ctx, R: number, sa: number) {
   // Down the right.
   p.bezierCurveTo(lean + tw * 1.08, capY + 0.1 * R, bw * 0.86, seat - 0.02 * R, bw, base);
   p.closePath();
-  // Lit from the top left: yellow-orange there, deeper orange down and to the right.
-  const g = x.createLinearGradient(-bw, top, bw + lean, seat);
-  g.addColorStop(0, "rgb(255,198,72)");
-  g.addColorStop(0.5, "rgb(255,168,44)");
-  g.addColorStop(1, "rgb(238,128,28)");
-  x.fillStyle = g;
+  // A rounded stub, so shaded as a cylinder across: a bright band a little
+  // left of its axis, falling into a core shadow on the right, with a breath of
+  // light reflected back at the far edge.
+  const axis = lean * 0.6;
+  const across = x.createLinearGradient(axis - bw, 0, axis + bw, 0);
+  across.addColorStop(0, "rgb(236,142,44)");
+  across.addColorStop(0.24, "rgb(255,208,104)");
+  across.addColorStop(0.44, "rgb(255,180,58)");
+  across.addColorStop(0.72, "rgb(234,128,28)");
+  across.addColorStop(0.9, "rgb(204,98,20)");
+  across.addColorStop(1, "rgb(224,124,40)");
+  x.fillStyle = across;
   x.fill(p);
   x.save();
   x.clip(p);
-  x.fillStyle = radialAt(x, lean - tw * 0.3, capY - tw * 0.1, tw * 1.3, [
-    [0, [255, 222, 130]],
-    [1, [255, 222, 130]],
+  // The dome catches the light from above; the root falls into shade.
+  const down = x.createLinearGradient(0, top, 0, seat);
+  down.addColorStop(0, "rgba(255,236,170,0.45)");
+  down.addColorStop(0.35, "rgba(255,236,170,0)");
+  down.addColorStop(0.7, "rgba(150,60,10,0)");
+  down.addColorStop(1, "rgba(150,60,10,0.45)");
+  x.fillStyle = down;
+  x.fill(p);
+  // A soft sheen on the dome and a small bright glint, as glossy plastic has.
+  x.fillStyle = radialAt(x, lean - tw * 0.35, capY - tw * 0.2, tw * 0.8, [
+    [0, [255, 244, 205]],
+    [1, [255, 244, 205]],
+  ], [0.85, 0]);
+  x.fillRect(-2 * bw, top - R * 0.1, 4 * bw + Math.abs(lean), -top);
+  x.fillStyle = radialAt(x, lean - tw * 0.42, capY - tw * 0.45, tw * 0.22, [
+    [0, [255, 255, 248]],
+    [1, [255, 255, 248]],
   ], [0.9, 0]);
   x.fillRect(-2 * bw, top - R * 0.1, 4 * bw + Math.abs(lean), -top);
-  // Its right flank turns away; its root sits in a dark orange contact shadow.
-  const flank = x.createLinearGradient(lean, 0, lean + tw * 1.4, 0);
-  flank.addColorStop(0, "rgba(200,90,10,0)");
-  flank.addColorStop(1, "rgba(200,90,10,0.3)");
-  x.fillStyle = flank;
-  x.fill(p);
-  const root = x.createLinearGradient(0, seat - 0.05 * R, 0, seat);
-  root.addColorStop(0, "rgba(170,60,10,0)");
-  root.addColorStop(1, "rgba(170,60,10,0.6)");
-  x.fillStyle = root;
-  x.fill(p);
+  x.restore();
+  // Its edges roll away all round.
+  innerShade(x, p, R, "rgba(160,64,8,0.5)", 0.07, -0.006);
+}
+
+/** The horn's soft shadow on the shell's crown, round its root. */
+function drawHornShadow(x: Ctx, R: number, sa: number, shell: Path2D) {
+  const lean = (sa / Math.sin(S.maxYaw)) * 0.12 * R;
+  x.save();
+  x.clip(shell);
+  x.translate(lean * 0.5 + 0.03 * R, -0.9 * R);
+  x.scale(1, 0.28);
+  const r = 0.34 * R;
+  const g = x.createRadialGradient(0, 0, 0, 0, 0, r);
+  g.addColorStop(0, "rgba(120,80,50,0.32)");
+  g.addColorStop(0.5, "rgba(120,80,50,0.12)");
+  g.addColorStop(1, "rgba(120,80,50,0)");
+  x.fillStyle = g;
+  x.fillRect(-r, -r, 2 * r, 2 * r);
   x.restore();
 }
 
@@ -456,111 +531,83 @@ function paintEar(x: Ctx, R: number, e: EarGeo, cb: number, over: boolean) {
   const cx = xb - s * (full / 2);
   const cy = S.earY * R;
   const pad = blob(cx, cy, full / 2, h / 2, h / 2, S.earN, S.earN);
+  const k = pxScale(x);
+  // Over the shell the slab ends at the wall's inner end, rounded off as an
+  // oval so it melts into the shell instead of ending on a cut.
+  const span = Math.abs(e.xi * R - xb);
+  const region = over ? blob((xb + e.xi * R) / 2, cy, span / 2, h / 2, h / 2, 2.2, 2.2) : null;
   x.save();
-  if (over) {
-    // Over the shell the slab stops at the wall's inner end.
-    // Rounded off, so the wall melts into the shell rather than ending on a square cut.
-    const span = Math.abs(e.xi * R - xb);
-    x.clip(roundRect((xb + e.xi * R) / 2, cy, span / 2, h / 2, Math.min(0.17 * R, span / 2, h / 2)));
-  }
+  if (region) x.clip(region);
   x.clip(pad);
-  // The wall: solid charcoal rubber, fully opaque on any background, lit at its
-  // outer end and falling to near black where it meets the shell.
-  const g = x.createLinearGradient(ox, 0, ox - s * wallW, 0);
-  g.addColorStop(0, "rgb(44,49,62)");
-  g.addColorStop(0.3, "rgb(30,33,42)");
-  g.addColorStop(0.75, "rgb(17,18,23)");
-  g.addColorStop(1, "rgb(9,10,12)");
+  // One body, shaded as one: the outer face a soft matte charcoal, turning
+  // through the wall's outer edge to near black where it meets the shell.
+  const g = x.createLinearGradient(xb, 0, ox - s * wallW, 0);
+  const f = clamp(fw / (fw + wallW), 0, 1);
+  g.addColorStop(0, "rgb(52,57,70)");
+  if (f > 0.02) g.addColorStop(f * 0.85, "rgb(44,48,60)");
+  g.addColorStop(Math.min(0.99, f + (1 - f) * 0.18), "rgb(36,40,51)");
+  g.addColorStop(Math.min(0.995, f + (1 - f) * 0.6), "rgb(24,26,33)");
+  g.addColorStop(1, over ? "rgb(30,32,40)" : "rgb(9,10,12)");
   x.fillStyle = g;
   x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
-  // Gloss: a cool light across the top, and a soft highlight on its shoulder.
+  // Gloss: a cool light across the top, falling away below.
   const top = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  top.addColorStop(0, "rgba(130,150,196,0.4)");
-  top.addColorStop(0.28, "rgba(100,118,160,0.12)");
-  top.addColorStop(0.5, "rgba(0,0,0,0)");
-  top.addColorStop(1, "rgba(0,0,0,0.22)");
+  top.addColorStop(0, "rgba(130,150,196,0.34)");
+  top.addColorStop(0.3, "rgba(100,118,160,0.1)");
+  top.addColorStop(0.55, "rgba(0,0,0,0)");
+  top.addColorStop(1, "rgba(0,0,0,0.24)");
   x.fillStyle = top;
   x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
-  x.fillStyle = radialAt(x, ox - s * wallW * 0.3, cy - h * 0.22, h * 0.3, [
+  x.fillStyle = radialAt(x, ox - s * wallW * 0.25, cy - h * 0.24, h * 0.32, [
     [0, [200, 210, 230]],
     [1, [200, 210, 230]],
-  ], [0.3, 0]);
+  ], [0.26, 0]);
   x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
-
-  if (fw > 0.012 * R) {
-    // The outer face: a dark rim, then an inset face a little lighter, lit from
-    // the top left, with the ear light down its middle (the side view's capsule).
-    x.save();
-    const fr = new Path2D();
-    fr.rect(Math.min(xb, ox), cy - h, fw, 2 * h);
-    x.clip(fr);
-    x.fillStyle = "rgb(12,13,17)";
-    x.fillRect(cx - full, cy - h, 2 * full, 2 * h);
-    const inset = Math.min(0.03 * R, fw * 0.2);
-    const inner = blob(cx, cy, full / 2 - inset, h / 2 - inset, h / 2 - inset, S.earN, S.earN);
-    const fg = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-    fg.addColorStop(0, "rgb(68,75,92)");
-    fg.addColorStop(0.5, "rgb(42,46,57)");
-    fg.addColorStop(1, "rgb(26,28,35)");
-    x.fillStyle = fg;
-    x.fill(inner);
-    const fcx = (xb + ox) / 2;
-    const lw = S.ledW * e.face * R;
-    const lh = S.ledH * R * cb;
-    if (lw > 0.004 * R) {
-      const k = pxScale(x);
-      x.save();
-      if (canBlur(x)) x.filter = `blur(${0.03 * R * k}px)`;
-      x.fillStyle = rgba(LED, 0.7);
-      x.fill(roundRect(fcx, cy, lw, lh / 2 + 0.02 * R, lw));
-      x.restore();
-      x.fillStyle = rgba(LED);
-      x.fill(roundRect(fcx, cy, lw / 2, lh / 2, lw / 2));
-      x.fillStyle = "rgba(225,252,255,0.9)";
-      x.fill(roundRect(fcx, cy, lw / 4, lh / 2 - lw / 4, lw / 4));
-    }
-    x.restore();
-    // The edge where the wall turns into the face.
-    const edge = x.createLinearGradient(ox - s * 0.025 * R, 0, ox + s * 0.025 * R, 0);
-    edge.addColorStop(0, "rgba(10,11,14,0)");
-    edge.addColorStop(0.5, "rgba(10,11,14,0.7)");
-    edge.addColorStop(1, "rgba(10,11,14,0)");
-    x.fillStyle = edge;
-    x.fillRect(ox - 0.025 * R, cy - h, 0.05 * R, 2 * h);
-  } else {
-    // Seen edge-on, the ear light is a bright teal line down the outer edge.
-    const lh = h * 0.56;
-    const k = pxScale(x);
-    const ly = cy + 0.03 * R;
-    if (canBlur(x)) {
-      x.filter = `blur(${0.02 * R * k}px)`;
-      x.fillStyle = rgba(LED, 0.16);
-      x.fill(roundRect(ox - s * 0.006 * R, ly, 0.026 * R, lh / 2, 0.026 * R));
-      x.filter = "none";
-    }
-    x.fillStyle = rgba(LED, 0.95);
-    x.fill(roundRect(ox - s * 0.008 * R, ly, 0.011 * R, lh / 2, 0.011 * R));
-  }
-  // A fine rim of light along the outer edge, strongest at the top.
-  const rim = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  rim.addColorStop(0, "rgba(120,148,204,0.55)");
-  rim.addColorStop(0.5, "rgba(80,130,160,0.32)");
-  rim.addColorStop(1, "rgba(60,80,100,0.08)");
-  x.lineWidth = 0.02 * R;
-  x.strokeStyle = rim;
-  x.stroke(pad);
   x.restore();
-  if (!over) {
-    // A dark line where the slab meets the page, so it reads as an object on light or dark.
-    x.lineWidth = 0.008 * R;
-    x.strokeStyle = "rgba(6,7,10,0.55)";
-    x.stroke(pad);
+
+  // A rounded bevel all round: its edges roll away, lit along the top, in shade below.
+  x.save();
+  if (region) x.clip(region);
+  innerShade(x, pad, R, "rgba(0,0,0,0.6)", 0.06, -0.012);
+  innerShade(x, pad, R, "rgba(150,175,215,0.32)", 0.035, 0.01);
+  x.restore();
+
+  // The ear light: a soft oval of cyan, white at its heart. Seen edge-on it is
+  // a slim oval at the outer edge; as the face turns toward us it fills out.
+  const t = clamp(fw / (0.06 * R), 0, 1);
+  const lcx = ox + s * (fw / 2 - 0.012 * R * (1 - t));
+  const lw = Math.max(S.ledW * e.face * R, 0.014 * R);
+  const lh = (S.ledH * (0.85 + 0.15 * e.face)) * R * cb;
+  const ly = cy + 0.02 * R * (1 - t);
+  x.save();
+  x.clip(pad);
+  if (region) x.clip(region);
+  if (canBlur(x)) {
+    x.filter = `blur(${0.045 * R * k}px)`;
+    x.fillStyle = rgba(LED, 0.55);
+    x.beginPath();
+    x.ellipse(lcx, ly, lw * 0.9 + 0.01 * R, lh / 2, 0, 0, TAU);
+    x.fill();
+    x.filter = `blur(${0.006 * R * k}px)`;
   }
+  const lg = x.createRadialGradient(lcx, ly, 0, lcx, ly, lh / 2);
+  lg.addColorStop(0, "rgba(236,253,255,1)");
+  lg.addColorStop(0.55, rgba(LED, 1));
+  lg.addColorStop(1, rgba(LED, 0.75));
+  x.fillStyle = lg;
+  x.beginPath();
+  x.ellipse(lcx, ly, lw / 2, lh / 2, 0, 0, TAU);
+  x.fill();
+  x.filter = "none";
+  x.restore();
 }
 
 /** The slab tucked behind the shell's edge: all of it from the front, its outer part when turned. */
 function drawEarBehind(x: Ctx, R: number, e: EarGeo, cb: number) {
-  paintEar(x, R, e, cb, false);
+  // As the near ear turns toward us its slab is drawn whole over the shell, so
+  // its tucked-away profile slides in under the shell to make way: one ear, never two.
+  const t = clamp(e.face / 0.12, 0, 1);
+  paintEar(x, R, { ...e, xo: e.xo + (e.xi - e.xo) * t, face: 0 }, cb, false);
 }
 
 /**
@@ -569,19 +616,10 @@ function drawEarBehind(x: Ctx, R: number, e: EarGeo, cb: number) {
  */
 function drawEarInFront(x: Ctx, R: number, e: EarGeo, cb: number) {
   if (e.face <= 0.004) return;
-  // The slab shades the shell where it stands over it.
-  const h = (S.earH + (S.earFaceH - S.earH) * e.face) * R * cb;
-  const span = Math.abs(e.xi - e.xo) * R;
-  x.save();
-  x.shadowColor = "rgba(60,52,64,0.4)";
-  x.shadowBlur = 0.07 * R * pxScale(x);
-  x.fillStyle = "#000";
-  x.fill(roundRect(((e.xo + e.xi) / 2) * R, S.earY * R, span / 2, h / 2 - 0.05 * R, 0.1 * R));
-  x.restore();
   paintEar(x, R, e, cb, true);
 }
 
-function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw: number, hh: number, ca: number, cb: number) {
+function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw: number, hh: number, ca: number, cb: number, light: RimLight) {
   // The screen sits down in a recess. The shell slopes softly in toward it,
   // shaded under the brow at the top and catching light along the bottom;
   // at the bottom of the slope, a thin taupe gap before the glass.
@@ -638,32 +676,59 @@ function drawScreen(x: Ctx, R: number, glass: Path2D, fx: number, fy: number, hw
   const rx = fx + S.rdx * R * ca;
   const ry = fy + S.rdy * R * cb;
   const rim = blob(rx, ry, S.rw * R * ca, S.rh * R * cb, S.rh * R * cb, S.rn, S.rn);
-  x.strokeStyle = rimStyle(x, rx, ry, hw);
-  if (canBlur(x)) {
-    // A true bloom: the line, blurred wide and then tight, under the crisp line.
-    const k = pxScale(x);
-    for (const [w, blur, al] of [[0.12, 0.07, 0.45], [0.075, 0.025, 0.85]] as const) {
-      x.filter = `blur(${blur * R * k}px)`;
-      x.globalAlpha = al;
-      x.lineWidth = w * R;
+  const style = rimStyle(x, rx, ry, hw, light.spin);
+  const glowRim = (m: number, st: CanvasGradient = style, core = true) => {
+    x.strokeStyle = st;
+    if (canBlur(x)) {
+      // A true bloom: the line, blurred wide and then tight, under the crisp line.
+      const k = pxScale(x);
+      for (const [w, blur, al] of [[0.12, 0.07, 0.45], [0.075, 0.025, 0.85]] as const) {
+        x.filter = `blur(${blur * R * k}px)`;
+        x.globalAlpha = clamp(al * m, 0, 1);
+        x.lineWidth = w * R;
+        x.stroke(rim);
+      }
+      x.filter = "none";
+      x.globalAlpha = clamp(m, 0, 1);
+      x.lineWidth = 0.046 * R;
+      x.stroke(rim);
+    } else {
+      for (const [w, al] of [[0.34, 0.07], [0.2, 0.12], [0.11, 0.26], [0.066, 0.6], [0.044, 1]] as const) {
+        x.globalAlpha = clamp(al * m, 0, 1);
+        x.lineWidth = w * R;
+        x.stroke(rim);
+      }
+    }
+    if (core) {
+      x.globalAlpha = clamp(0.18 * m, 0, 1);
+      x.lineWidth = 0.014 * R;
+      x.strokeStyle = "rgb(255,255,255)";
       x.stroke(rim);
     }
-    x.filter = "none";
     x.globalAlpha = 1;
-    x.lineWidth = 0.046 * R;
-    x.stroke(rim);
+  };
+  if (light.chase === null) {
+    glowRim(light.level);
+    if (light.level > 1) {
+      // Brighter than at rest: a second, wider bloom.
+      x.save();
+      x.globalCompositeOperation = "lighter";
+      glowRim((light.level - 1) * 0.8);
+      x.restore();
+    }
   } else {
-    for (const [w, al] of [[0.34, 0.07], [0.2, 0.12], [0.11, 0.26], [0.066, 0.6], [0.044, 1]] as const) {
-      x.globalAlpha = al;
-      x.lineWidth = w * R;
-      x.stroke(rim);
+    // Loading: the ring dims, and a bright comet runs round it, its tail fading
+    // smoothly away behind it.
+    glowRim(0.18 * light.level);
+    const comet = cometStyle(x, rx, ry, light.spin, light.chase);
+    if (comet) {
+      glowRim(light.level, comet, false);
+      x.save();
+      x.globalCompositeOperation = "lighter";
+      glowRim(light.level * 0.7, comet, false);
+      x.restore();
     }
   }
-  x.globalAlpha = 0.18;
-  x.lineWidth = 0.014 * R;
-  x.strokeStyle = "rgb(255,255,255)";
-  x.stroke(rim);
-  x.globalAlpha = 1;
   // Convex glass: a broad, faint sheen across the top, and the window's soft
   // reflection up in the top-right corner.
   x.fillStyle = radialAt(x, fx - hw * 0.15, fy - hh * 1.25, hw * 1.05, [
@@ -708,6 +773,17 @@ function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   // Light on glass has soft edges, never a vector-crisp one.
   if (canBlur(x)) x.filter = `blur(${0.005 * R * pxScale(x)}px)`;
   light(x, R);
+  if (p.glyph === "loading") {
+    // Its eyes become three dots that rise in a wave and swell as they pass the top.
+    for (let i = 0; i < 3; i++) {
+      const b = Math.max(0, Math.sin(p.t * 5.2 - i * 0.95));
+      x.beginPath();
+      x.arc((i - 1) * S.eyeX * R0, -b * 0.1 * R, (0.062 + 0.03 * b) * R, 0, TAU);
+      x.fill();
+    }
+    if (canBlur(x)) x.filter = "none";
+    return;
+  }
   for (const sd of [-1, 1]) {
     x.save();
     x.translate(sd * S.eyeX * R0, 0);
