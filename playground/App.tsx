@@ -126,7 +126,7 @@ function MoonIcon() {
 
 const THEME_KEY = "robo-avatar:theme";
 
-/** The page's theme: the OS's until the visitor picks one, and then theirs. */
+/** The page's theme: dark until the visitor picks one, and then theirs. */
 function useTheme() {
   const [theme, setThemeState] = useState<"light" | "dark">(() => {
     try {
@@ -135,7 +135,7 @@ function useTheme() {
     } catch {
       // Storage can be blocked; follow the OS.
     }
-    return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return "dark";
   });
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -285,19 +285,24 @@ export default function App() {
     }
   };
   const snippet = useMemo(() => reactSnippet(look), [look]);
-  const thumb = (change: Partial<MascotLook>): MascotLook => ({ ...DEFAULT_LOOK, ...change });
+  const thumb = (change: Partial<MascotLook>): MascotLook => ({ ...DEFAULT_LOOK, head: "classic", ...change });
   const classic = look.head === "classic";
   const customColor = !!look.color && !COLOR_SWATCHES.some((c) => c.value === look.color);
 
   return (
     <>
-      <div className="topWrap" data-scrolled={scrolled || undefined}>
+      <div id="top" className="topWrap" data-scrolled={scrolled || undefined}>
         <header className="top">
-          <RoboAvatar size={56} look={look} glow={0.2} shadow={false} label="Robo" />
-          <div className="title">
-            <h1>Robo avatar</h1>
-            <p>A tiny animated robot, drawn in Canvas 2D and WebGL2.</p>
-          </div>
+          <RoboAvatar size={52} look={look} glow={0.2} shadow={false} label="Robo" />
+          <a className="title" href="#top" aria-label="Robo avatar, back to the top">
+            Robo <span>avatar</span>
+          </a>
+          <nav className="nav" aria-label="Sections">
+            <a href="#expressions">Expressions</a>
+            <a href="#states">States</a>
+            <a href="#sizes">Sizes</a>
+            <a href="#code">Code</a>
+          </nav>
           <button type="button" className="iconBtn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Light mode" : "Dark mode"}>
             {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
@@ -422,7 +427,7 @@ export default function App() {
           </aside>
         </div>
 
-        <section className="section" aria-label="Expressions">
+        <section className="section" id="expressions" aria-label="Expressions">
           <h2>Expressions</h2>
           <div className="sheet four">
             {EXPRESSIONS.map((e) => (
@@ -442,7 +447,7 @@ export default function App() {
           </div>
         </section>
 
-        <section className="section" aria-label="Every state">
+        <section className="section" id="states" aria-label="Every state">
           <h2>Every state</h2>
           <div className="sheet">
             {STATES.map((s) => (
@@ -454,7 +459,7 @@ export default function App() {
           </div>
         </section>
 
-        <section className="section" aria-label="Sizes and video stream">
+        <section className="section" id="sizes" aria-label="Sizes and video stream">
           <h2>Sizes and video stream</h2>
           <div className="sizes">
             {SIZES.map((sz) => (
@@ -470,7 +475,7 @@ export default function App() {
           </div>
         </section>
 
-        <section className="section" aria-label="Use this look">
+        <section className="section" id="code" aria-label="Use this look">
           <h2>Use this look</h2>
           <pre className="code" tabIndex={0}>
             {snippet}

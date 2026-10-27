@@ -1,7 +1,7 @@
 {
   "name": "robo-avatar",
   "version": "0.1.0",
-  "description": "A tiny animated robot mascot, drawn entirely in Canvas 2D and WebGL2: no images, no Lottie. Nine states, four emotes, wearables, fur and a playground.",
+  "description": "A face for your AI: a small animated robot that shows what your product is doing. Drawn in Canvas 2D and WebGL2, with no images, no Lottie and no dependencies.",
   "keywords": ["mascot", "avatar", "robot", "canvas", "webgl", "animation", "react"],
   "license": "MIT",
   "type": "module",

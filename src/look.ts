@@ -2,9 +2,10 @@
  * Robo's whole look: what it wears, its fur, colour, and the
  * two parts of its face that can be switched off.
  *
- * The default is a round, furry, sky-blue Robo, bare, with its face plate
- * and its ring. Switch the fur off and pick "Original white" (a null colour)
- * for the smooth white original. Everything else is opt-in.
+ * The default is the screen head. The classic head, by default, is round,
+ * furry and sky blue, bare, with its face plate and its ring: switch the fur
+ * off and pick "Original white" (a null colour) for the smooth white original.
+ * Everything else is opt-in.
  */
 
 import { outfitOf, type MascotAddon } from "./addons";
@@ -12,10 +13,10 @@ import { faceTuneOf, sameFaceTune, type FaceTune } from "./face-style";
 import { furStyleOf, furTuneOf, sameTune, type FurStyle, type FurTune } from "./fur-style";
 
 /**
- * Which head it has. "classic" is the lit ball with a face plate, and every
- * setting below applies to it. "screen" is a rounded helmet with a black
- * screen for a face, a rainbow rim, a horn and ear pads (screen-head); it
- * has no colour, fur, glow or wearables.
+ * Which head it has. "screen" (the default) is a rounded helmet with a black
+ * screen for a face, a rainbow rim, a horn and ear pads (screen-head); it has
+ * no colour, fur, glow or wearables. "classic" is the lit ball with a face
+ * plate, and every setting below applies to it.
  */
 export type HeadStyle = "classic" | "screen";
 
@@ -48,7 +49,7 @@ export interface MascotLook {
 }
 
 export const DEFAULT_LOOK: MascotLook = {
-  head: "classic",
+  head: "screen",
   addons: [],
   fur: true,
   furStyle: "silky",

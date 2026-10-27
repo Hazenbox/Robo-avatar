@@ -34,11 +34,11 @@ describe("looks from untrusted input", () => {
     expect(lookOf({ shape: "star", fur: true })).toMatchObject({ fur: true });
   });
 
-  test("the head is classic unless it is a known other one", () => {
-    expect(lookOf({ head: "screen" }).head).toBe("screen");
-    expect(lookOf({ head: "toaster" }).head).toBe("classic");
-    expect(lookOf({}).head).toBe("classic");
-    expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, head: "screen" })).toBe(false);
+  test("the head is the screen unless it is a known other one", () => {
+    expect(lookOf({ head: "classic" }).head).toBe("classic");
+    expect(lookOf({ head: "toaster" }).head).toBe("screen");
+    expect(lookOf({}).head).toBe("screen");
+    expect(sameLook(DEFAULT_LOOK, { ...DEFAULT_LOOK, head: "classic" })).toBe(false);
   });
 
   test("a bare list is the old saved form: just wearables", () => {
