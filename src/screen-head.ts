@@ -27,7 +27,7 @@ type RGB = [number, number, number];
 /** What the screen can show. Most are the engine's eyes; "think" is the screen's own. */
 export type ScreenGlyph =
   | "pill" | "wide" | "happy" | "closed" | "half" | "x" | "spiral" | "heart" | "star" | "wink"
-  | "excited" | "confused" | "think" | "loading";
+  | "excited" | "confused" | "think" | "loading" | "generating";
 
 /** How the rim light behaves right now. */
 export interface RimLight {
@@ -773,6 +773,11 @@ function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
   // Light on glass has soft edges, never a vector-crisp one.
   if (canBlur(x)) x.filter = `blur(${0.005 * R * pxScale(x)}px)`;
   light(x, R);
+  if (p.glyph === "generating") {
+    drawWriting(x, R0, p);
+    if (canBlur(x)) x.filter = "none";
+    return;
+  }
   if (p.glyph === "loading") {
     // Its eyes become three dots that rise in a wave and swell as they pass the top.
     for (let i = 0; i < 3; i++) {
@@ -795,8 +800,80 @@ function drawGlyphs(x: Ctx, R0: number, p: ScreenPose) {
 }
 
 /** A slightly squared oval (a superellipse of power 2.3), as the screen draws its eyes. */
-function oval(x: Ctx, R: number, rx: number, ry: number, dy = 0) {
-  x.fill(blob(0, dy * R, rx * R, Math.max(ry * R, 0.01 * R), Math.max(ry * R, 0.01 * R), 2.3, 2.3));
+const hash = (i: number) => {
+  const v = Math.sin(i * 12.9898 + 4.1) * 43758.5453;
+  return v - Math.floor(v);
+};
+const easeOut = (t: number) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+const easeInOut = (t: number) => {
+  const u = clamp(t, 0, 1);
+  return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+};
+
+/**
+ * Generating: the screen becomes a page being written. Its eyes move up and
+ * narrow, looking down at the work; a twinkle beside them; and below, lines of
+ * light type themselves out left to right behind a bright cursor, the page
+ * scrolling up a line as each new one begins. In R, from the eyes' line.
+ */
+function drawWriting(x: Ctx, R: number, p: ScreenPose) {
+  const open = Math.max(0.06, p.open);
+  // Eyes, high and a little narrowed, looking down at the page.
+  for (const sd of [-1, 1]) oval(x, R, 0.088, 0.082 * open, -0.35, sd * 0.29);
+  // A twinkle beside them: the mark of something being made.
+  const tw = 0.55 + 0.45 * Math.abs(Math.sin(p.t * 3.1));
+  x.save();
+  x.translate(0.56 * R, -0.37 * R);
+  x.rotate(p.t * 0.6);
+  x.scale(tw, tw);
+  x.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const r = (i % 2 ? 0.022 : 0.085) * R;
+    const a = -Math.PI / 2 + (i * Math.PI) / 4;
+    x.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  x.closePath();
+  x.fill();
+  x.restore();
+
+  // The page: four rows, each line taking 0.85 s to write.
+  const per = 0.85;
+  const rows = 4;
+  const left = -0.58 * R;
+  const maxW = 1.16 * R;
+  const top = -0.14 * R;
+  const gap = 0.16 * R;
+  const thick = 0.056 * R;
+  const tt = p.t / per;
+  const L = Math.floor(tt);
+  const f = tt - L;
+  const settle = easeOut(f / 0.22);
+  for (let i = L - rows; i <= L; i++) {
+    // Rows count down from the line being written at the bottom; all slide up as a new one begins.
+    const row = rows - 1 - (L - i) + (1 - settle);
+    if (row < -1 || row > rows) continue;
+    const alpha = row < 0 ? row + 1 : row > rows - 1 ? rows - row : 1;
+    // Lines of a paragraph: most run long, every fourth stops short.
+    const w = maxW * (i % 4 === 3 ? 0.35 + 0.2 * hash(i) : 0.62 + 0.38 * hash(i));
+    const done = i < L ? 1 : easeInOut((f - 0.12) / 0.78);
+    const y = top + row * gap;
+    if (done > 0.01) {
+      x.globalAlpha = 0.62 * clamp(alpha, 0, 1);
+      x.fill(roundRect(left + (w * done) / 2, y, (w * done) / 2, thick / 2, thick / 2));
+    }
+    if (i === L) {
+      // The cursor, bright at the end of the line it is writing.
+      x.globalAlpha = clamp(alpha, 0, 1);
+      x.beginPath();
+      x.arc(left + w * done + 0.035 * R, y, 0.04 * R, 0, TAU);
+      x.fill();
+    }
+  }
+  x.globalAlpha = 1;
+}
+
+function oval(x: Ctx, R: number, rx: number, ry: number, dy = 0, dx = 0) {
+  x.fill(blob(dx * R, dy * R, rx * R, Math.max(ry * R, 0.01 * R), Math.max(ry * R, 0.01 * R), 2.3, 2.3));
 }
 
 /**

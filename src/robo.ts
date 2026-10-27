@@ -761,7 +761,10 @@ export class Robo {
     const eye = this.currentEye();
     // Thinking has a face of its own on the screen; elsewhere it shares the engine's eyes.
     const glyph: ScreenGlyph =
-      this.state === "loading" ? "loading" : eye === "pill" && this.state === "thinking" ? "think" : eye;
+      this.state === "loading" ? "loading"
+      : this.state === "generating" && !this.eyeOverride ? "generating"
+      : eye === "pill" && this.state === "thinking" ? "think"
+      : eye;
     const t = now() - this.t0;
     drawScreenHead(x, R, {
       yaw: this.yaw,
