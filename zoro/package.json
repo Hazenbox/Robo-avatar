@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A face for your AI: a small animated robot that shows what your product is doing. Drawn in Canvas 2D and WebGL2, with no images, no Lottie and no dependencies.",
   "author": "Upen (https://www.linkedin.com/in/upen-design/)",
-  "keywords": ["ai", "chatbot", "assistant", "avatar", "mascot", "robot", "loading", "animation", "canvas", "webgl", "react", "ui"],
+  "keywords": ["ai", "chatbot", "assistant", "avatar", "mascot", "robot", "loading", "generating", "animation", "canvas", "webgl", "react", "ui"],
   "license": "MIT",
   "type": "module",
   "repository": { "type": "git", "url": "git+https://github.com/Hazenbox/Zoro-avatar.git", "directory": "zoro" },

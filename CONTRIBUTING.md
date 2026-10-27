@@ -5,7 +5,7 @@ Thanks for wanting to help. Zoro is small on purpose, so contributions are easy 
 ## Good first things
 
 - A bug: something draws wrong, or a state looks off at some size or in some browser.
-- A new **wearable** or **emote**.
+- A new **wearable** or **emote** (soft things should swing and settle, not snap).
 - A new **state** for what an AI might be doing.
 - Making the docs or the playground clearer.
 

@@ -66,7 +66,7 @@ A soft, fluffy ball with big feelings. Pick its colour, give it a scarf, goggles
 </tr>
 </table>
 
-Both of them follow whatever you point at, blink, breathe and turn to look at you. They feel alive without ever getting in the way.
+Both of them follow whatever you point at: their eyes lead, their heads turn, and their ears, horn and fur turn with them. They blink, breathe and feel alive without ever getting in the way.
 
 ## Every mood, at a glance
 
@@ -96,10 +96,21 @@ Plus six quick reactions to play any time: love, proud, surprised, wink, excited
 
 Pick a colour. Add a knitted scarf, goggles, a visor or a headset. Tune the fur. Your design is saved right in the link, so you can send it to a teammate and they see exactly what you made.
 
+Soft things move like soft things: the scarf swings and settles like real wool, and the headset sits on the head and moves with it.
+
+## Fresh from the workshop
+
+- **Four new moods for AIs at work:** loading, processing, generating, and a nod for yes.
+- **A knitted scarf** with every stitch drawn, a fringed tail, and real swing.
+- **A headset and a visor** that follow the head as it turns, tips and looks around.
+- **A glossier Screen head:** soft rounded ears, a 3D horn, a flowing rainbow rim.
+- **Sharper tracking:** the eyes lead, the head follows, and it all feels natural.
+
 ## Why you'll like it
 
 - **Nothing to download.** No image files, no animation files. Zoro draws itself, live, at any size, crisp on every screen.
 - **Tiny.** About 45 KB, less than a single photo.
+- **Feels real.** Soft parts have weight: they swing, lag behind and settle, instead of snapping into place.
 - **Kind to people.** It stops when it's off screen, and calms down for anyone who asks their device for less motion.
 - **Private.** Nothing is recorded or sent anywhere.
 - **Free.** Open source, yours to use in anything.
