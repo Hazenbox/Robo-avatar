@@ -256,7 +256,6 @@ export default function App() {
       if (v) v.srcObject = null;
     };
     // Made once; the look is pushed to it by the effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => feed.current?.setLook(look), [look]);
 
@@ -294,9 +293,11 @@ export default function App() {
       <div id="top" className="topWrap" data-scrolled={scrolled || undefined}>
         <header className="top">
           <RoboAvatar size={52} look={look} glow={0.2} shadow={false} label="Robo" />
-          <a className="title" href="#top" aria-label="Robo avatar, back to the top">
-            Robo <span>avatar</span>
-          </a>
+          <h1 className="title">
+            <a href="#top" aria-label="Robo avatar, back to the top">
+              Robo <span>avatar</span>
+            </a>
+          </h1>
           <nav className="nav" aria-label="Sections">
             <a href="#expressions">Expressions</a>
             <a href="#states">States</a>

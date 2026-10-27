@@ -127,6 +127,8 @@ Change `state` as your AI moves along, and Robo follows. Not a developer? Open t
 
 Run the playground on your own computer: `cd robo && npm install && npm run dev`.
 
+Want to help? Ideas, bug reports and new wearables are welcome: see [CONTRIBUTING](CONTRIBUTING.md).
+
 <br>
 
 <div align="center">

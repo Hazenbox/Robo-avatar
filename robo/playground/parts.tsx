@@ -67,7 +67,6 @@ function Thumb({ look, size }: { look: MascotLook; size: number }) {
     const x = c.getContext("2d");
     x?.drawImage(lookThumb(look, size, dpr), 0, 0);
     // `key` stands for the whole look.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, size]);
   return <canvas ref={ref} style={{ width: size, height: size }} aria-hidden="true" />;
 }
