@@ -1,134 +1,137 @@
 <div align="center">
 
+<br>
+
+<img src="assets/hero.gif" alt="Five little robots, each doing something different: listening, thinking, loading, processing and generating" width="100%">
+
+<br>
+<br>
+
 # Robo
 
 ### A face for your AI.
 
-A small animated robot that shows what your product is doing: listening, thinking, loading, writing, nodding yes.
-Drawn live in code. No images, no Lottie, no dependencies. About 45 KB gzipped.
+Little robots that show what your AI is doing,<br>so waiting feels like watching someone work.
 
-**[Try the playground](https://hazenbox.github.io/Robo-avatar/)** &nbsp;·&nbsp; [Use it](#use-it) &nbsp;·&nbsp; [States](#states) &nbsp;·&nbsp; [Make it yours](#make-it-yours)
+<br>
+
+**[▶ &nbsp;Play with them live](https://hazenbox.github.io/Robo-avatar/)**
+
+<br>
 
 </div>
 
 ---
 
-## Why
+## The problem
 
-When an AI is working, the screen is usually empty, or a spinner. That quiet moment is where people decide whether they trust it. A character that visibly listens, thinks, searches and writes turns waiting into something that feels like a collaborator at work.
+Ask an AI something and… nothing. A blank screen. A spinning circle.
 
-Robo is built for that moment:
+Those few seconds are when people decide whether to trust it. A spinner says *"wait."* A face says *"I'm on it."*
 
-- **It says what is happening.** Thirteen states, each with its own motion and its own colour: from `listening` and `thinking` to `loading`, `processing` and `generating`.
-- **It is alive, and never in the way.** It follows the pointer, blinks, breathes and turns its head. It pauses off screen and respects reduced motion.
-- **It is yours.** Two heads, six emotes, wearables, fur, colour. One small object describes a look, and a URL can share it.
-- **It is light.** Canvas 2D plus a small WebGL2 pass for fur. No image files, no animation runtime.
+## The idea
 
-## Two heads
+**Give your AI a face, and let the face do the talking.**
 
-| | **Screen** (default) | **Classic** |
-| --- | --- | --- |
-| What it is | A cream helmet with a glass screen, a rainbow rim light, a horn and ear pads | A soft lit ball with a face plate |
-| Feels like | A helper that works | A friend that reacts |
-| Shows its work | On the screen itself: dots while loading, a page writing itself while generating, a flowing rim while processing | Around it: a ring of light, a spinner, sparks and bouncing dots |
-| Make it yours | Its expressions and states | Fur, colour, wearables, face tuning |
+Robo listens when you type. It thinks. It goes off to read a dozen sources. Then it writes your answer, line by line, and gives a little nod when it's done. No explanation needed, anyone gets it at a glance.
 
-## States
+<div align="center">
+<img src="assets/chat.gif" alt="A chat where the robot warms up, reads twelve sources, then writes the answer" width="100%">
+</div>
 
-| State | When to use it | What it does |
-| --- | --- | --- |
-| `idle` | Nothing is happening | Breathes, blinks, glances around |
-| `listening` | The user is speaking or typing | Leans in; the rim brightens with the room |
-| `speaking` | The AI is answering aloud | Its mouth follows a voice level you feed it |
-| `thinking` | A quick pause before an answer | Looks up and aside |
-| `loading` | Waiting on something | The rim dims and a comet of light runs round it; three dots rise on the screen |
-| `processing` | Working through a lot | The rim's colours flow round; its eyes read side to side |
-| `generating` | Making something | The screen becomes a page, writing itself line by line |
-| `nodding` | A yes, an acknowledgement | Three nods, repeating |
-| `happy` · `unimpressed` · `error` · `sleeping` · `dizzy` | Outcomes and moods | Each has a face and a motion of its own |
+## Two characters
 
-Plus six one-shot **emotes** you can play on top of any state: `love`, `proud`, `surprised`, `wink`, `excited`, `confused`.
+<div align="center">
+<img src="assets/heads.gif" alt="The Screen robot and the Classic robot, both following a moving point with their eyes and heads" width="100%">
+</div>
 
-## Use it
+<table>
+<tr>
+<td width="50%" valign="top">
 
-```bash
-npm install robo-avatar
-```
+### Screen
+*The helper that gets things done.*
 
-> Not on npm yet. Until it is, clone the repo, run `npm install && npm run build`, and `npm link`.
+A glass face that shows its work: dots while it loads, a page writing itself while it creates, a ring of colour while it thinks hard.
 
-**React**
+</td>
+<td width="50%" valign="top">
+
+### Classic
+*The friend that reacts.*
+
+A soft, fluffy ball with big feelings. Pick its colour, give it a beanie or headphones, and it's yours.
+
+</td>
+</tr>
+</table>
+
+Both of them follow whatever you point at, blink, breathe and turn to look at you. They feel alive without ever getting in the way.
+
+## Every mood, at a glance
+
+<div align="center">
+<img src="assets/states.gif" alt="Twelve robots in twelve moods: listening, speaking, thinking, loading, processing, generating, nodding, happy, unimpressed, error, sleeping and dizzy" width="100%">
+</div>
+
+<br>
+
+| When your AI is… | Robo… |
+| --- | --- |
+| **Listening** | leans in and brightens with your voice |
+| **Thinking** | looks up, mid-thought |
+| **Loading** | lets a comet of light run round its face |
+| **Processing** | flows with colour while its eyes scan side to side |
+| **Generating** | turns its face into a page and writes on it |
+| **Saying yes** | nods, three times |
+| **Done, stuck or asleep** | smiles, frowns, or dozes off |
+
+Plus six quick reactions to play any time: love, proud, surprised, wink, excited, confused.
+
+## Make it yours
+
+<div align="center">
+<img src="assets/looks.gif" alt="Four Classic robots in different colours wearing headphones, a beanie, goggles and a muffler" width="100%">
+</div>
+
+Pick a colour. Add a hat, goggles or headphones. Tune the fur. Your design is saved right in the link, so you can send it to a teammate and they see exactly what you made.
+
+## Why you'll like it
+
+- **Nothing to download.** No image files, no animation files. Robo draws itself, live, at any size, crisp on every screen.
+- **Tiny.** About 45 KB, less than a single photo.
+- **Kind to people.** It stops when it's off screen, and calms down for anyone who asks their device for less motion.
+- **Private.** Nothing is recorded or sent anywhere.
+- **Free.** Open source, yours to use in anything.
+
+## Add it in a minute
+
+Using React? This is the whole thing:
 
 ```tsx
 import { RoboAvatar } from "robo-avatar/react";
 
-<RoboAvatar size={96} state="thinking" />;
+<RoboAvatar size={64} state="thinking" />
 ```
 
-**Plain JavaScript**
+Change `state` as your AI moves along, and Robo follows. Not a developer? Open the [playground](https://hazenbox.github.io/Robo-avatar/), design your robot, and hand over the code it writes for you.
 
-```ts
-import { mountRobo } from "robo-avatar";
+> Robo isn't on npm yet. Until it is, clone this repo, run `npm install && npm run build` inside the `robo` folder, and `npm link`.
 
-const robo = mountRobo(document.querySelector("canvas")!, { state: "idle" });
-robo.setState("generating");
-robo.emote("wink");
-robo.destroy();
-```
+## What's inside
 
-**In an AI chat**: map your app's status to a state, and you are done.
+| Folder | What's in it |
+| --- | --- |
+| `robo/` | Everything: the code, the playground and the tests |
+| `assets/` | The animations on this page, made with Robo itself |
 
-```tsx
-const state = { idle: "idle", sending: "loading", streaming: "generating", error: "error" }[status];
+Run the playground on your own computer: `cd robo && npm install && npm run dev`.
 
-<RoboAvatar size={40} state={state} />;
-```
+<br>
 
-**A video-call tile**: the same Robo as a `MediaStream`.
+<div align="center">
 
-```ts
-import { createRoboMediaStream } from "robo-avatar";
+Designed and built by **Upen Krishnan**.<br>
+Open source under the [MIT licence](LICENSE). Inspired by coucou's Mochi; no code is shared.
 
-const feed = createRoboMediaStream();
-video.srcObject = feed.stream;
-```
-
-## Make it yours
-
-A look is one small object. The playground builds it for you and writes the code.
-
-```tsx
-<RoboAvatar look={{ head: "classic", fur: true, color: "#ff8fb4", addons: ["beanie"] }} />
-```
-
-| Option | Default | What it does |
-| --- | --- | --- |
-| `look` | the screen head | Head, colour, fur, face and wearables |
-| `state` | `"idle"` | Starting state |
-| `followPointer` | `true` | Eyes and head follow the pointer |
-| `lookReach` | `260` | How far (px) the pointer must be for a full look to one side |
-| `shadow` | `true` | Soft floor shadow |
-| `glow` | `0.3` | Halo strength on the classic head |
-| `reducedMotion` | `"auto"` | Follow the OS setting, or force it |
-| `pokeOnClick` | `true` | Click to poke it; three quick pokes make it dizzy |
-
-The handle from `mountRobo` has `setState`, `emote`, `poke`, `setLook`, `setVoice`, `lookAt` and `destroy`. Feed `setVoice` a 0 to 1 level to make it speak.
-
-## Details that matter
-
-- **Accessible.** Honours `prefers-reduced-motion`; give it a `label` for screen readers.
-- **Polite.** Drawing stops when the canvas is off screen, and a hidden tab never gets a huge time step.
-- **Sharp.** Draws at the device's pixel ratio (capped), at any size from a 32 px chip to a hero.
-- **Private.** Nothing is recorded or sent anywhere.
-
-## Build on it
-
-```bash
-npm install
-npm run dev     # the playground, with every control
-npm run check   # typecheck, tests, library build, playground build
-```
-
-## Licence
-
-MIT. See [LICENSE](LICENSE). Inspired by coucou's Mochi; no code is shared.
+</div>
