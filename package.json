@@ -17,7 +17,7 @@
     "./react": { "types": "./dist/react.d.ts", "import": "./dist/react.js" },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "LICENSE", "NOTICE", "README.md"],
+  "files": ["dist", "LICENSE", "README.md"],
   "scripts": {
     "dev": "vite --config playground/vite.config.ts",
     "build": "tsup",

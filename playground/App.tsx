@@ -492,7 +492,7 @@ export default function App() {
 
       <footer className="foot">
         <p>
-          Robo avatar is MIT licensed. The animation technique follows coucou&apos;s Mochi engine; see <a href="https://github.com/Hazenbox/Robo-avatar/blob/main/NOTICE">NOTICE</a>.
+          Robo avatar is MIT licensed. Inspired by coucou&apos;s Mochi.
         </p>
       </footer>
     </>

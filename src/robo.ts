@@ -2,10 +2,9 @@
  * Robo: a lit sphere with an inset face plate, drawn entirely in Canvas 2D
  * (and, for the turning solid body, WebGL2). No images, no Rive, no Lottie.
  *
- * The technique follows coucou's Mochi engine (MIT; see NOTICE): one table of
- * states, a handful of animated numbers moved by tweens or by easing toward a
- * target, and a draw pass that reads them every frame. The character itself is
- * original.
+ * The design is one table of states, a handful of animated numbers moved by
+ * tweens or by easing toward a target, and a draw pass that reads them every
+ * frame. (Inspired by coucou's Mochi; no code is shared.)
  *
  * Units: everything is in R, the body's vertical radius, so the same engine
  * draws a favicon, a hero and a video-call tile.
@@ -666,8 +665,8 @@ export class Robo {
     for (const p of this.particles) p.age += dt;
     this.particles = this.particles.filter((p) => p.age < p.life);
 
-    // Soft parts lag behind head turns and hops (stiffness 60, damping 9, as
-    // in coucou's Mochi). Only add-ons read it.
+    // Soft parts lag behind head turns and hops (a spring: stiffness 60,
+    // damping 9). Only add-ons read it.
     if (dt > 0) {
       const yawVel = (this.yaw - this.prevYaw) / dt;
       const oyVel = (this.oy - this.prevOy) / dt;

@@ -79,4 +79,4 @@ npm run check   # typecheck, tests, library build, playground build
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+MIT. See [LICENSE](LICENSE). Inspired by coucou's Mochi; no code is shared.
