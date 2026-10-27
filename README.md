@@ -15,7 +15,7 @@ Little robots that show what your AI is doing,<br>so waiting feels like watching
 
 <br>
 
-**[▶ &nbsp;Play with them live](https://zoroavatar.vercel.app)**
+**[▶ &nbsp;Play with them live](https://zoro-avatar.vercel.app)**
 
 <br>
 
@@ -114,7 +114,7 @@ import { ZoroAvatar } from "zoro-avatar/react";
 <ZoroAvatar size={64} state="thinking" />
 ```
 
-Change `state` as your AI moves along, and Zoro follows. Not a developer? Open the [playground](https://zoroavatar.vercel.app), design your robot, and hand over the code it writes for you.
+Change `state` as your AI moves along, and Zoro follows. Not a developer? Open the [playground](https://zoro-avatar.vercel.app), design your robot, and hand over the code it writes for you.
 
 > Zoro isn't on npm yet. Until it is, clone this repo, run `npm install && npm run build` inside the `zoro` folder, and `npm link`.
 
