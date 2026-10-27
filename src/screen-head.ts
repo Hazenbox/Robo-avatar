@@ -459,9 +459,9 @@ function paintEar(x: Ctx, R: number, e: EarGeo, cb: number, over: boolean) {
   x.save();
   if (over) {
     // Over the shell the slab stops at the wall's inner end.
-    const r = new Path2D();
-    r.rect(Math.min(xb, e.xi * R), cy - h, Math.abs(e.xi * R - xb), 2 * h);
-    x.clip(r);
+    // Rounded off, so the wall melts into the shell rather than ending on a square cut.
+    const span = Math.abs(e.xi * R - xb);
+    x.clip(roundRect((xb + e.xi * R) / 2, cy, span / 2, h / 2, Math.min(0.17 * R, span / 2, h / 2)));
   }
   x.clip(pad);
   // The wall: solid charcoal rubber, fully opaque on any background, lit at its

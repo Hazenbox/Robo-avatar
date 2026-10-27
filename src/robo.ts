@@ -46,14 +46,18 @@ export type MascotState =
   | "unimpressed"
   | "error"
   | "sleeping"
-  | "dizzy";
+  | "dizzy"
+  | "nodding"
+  | "loading"
+  | "processing"
+  | "generating";
 
 export type MascotEmote = "love" | "proud" | "surprised" | "wink" | "excited" | "confused";
 
 type Eye =
   | "pill" | "wide" | "happy" | "closed" | "half" | "x" | "spiral" | "heart" | "star" | "wink"
   | "excited" | "confused";
-type Prop = "arcs" | "bars" | "bubbles" | "stress";
+type Prop = "arcs" | "bars" | "bubbles" | "stress" | "orbit" | "arc" | "dots";
 
 type StateCfg = {
   /** The halo's colour. */
@@ -65,6 +69,8 @@ type StateCfg = {
   /** The one accessory the state shows; "zz" is particles, not a prop. */
   prop: Prop | "zz" | null;
   look?: [number, number];
+  /** The gaze moves by itself: "sweep" scans side to side, as when reading through a lot. */
+  scan?: "sweep";
   glowI?: number;
   bounce?: boolean;
   breathe?: boolean;
@@ -174,9 +180,17 @@ export const MASCOT_STATES: Record<MascotState, StateCfg> = {
   error: { glow: [255, 110, 110], tint: 0.6, eye: "x", mouth: null, prop: "stress" },
   sleeping: { glow: [140, 156, 190], tint: 0.5, eye: "closed", mouth: null, prop: "zz", look: [0, 0.35], glowI: 0.45, breathe: true },
   dizzy: { glow: [255, 160, 210], tint: 0.5, eye: "spiral", mouth: null, prop: null },
+  // A yes: it nods now and then.
+  nodding: { glow: [175, 230, 195], tint: 0.3, eye: "pill", mouth: null, prop: null },
+  // Waiting on something: a ring of light circles it, and it looks up at it.
+  loading: { glow: [150, 190, 255], tint: 0.4, eye: "pill", mouth: null, prop: "orbit", look: [0, -0.3] },
+  // Working through a lot: a spinner round it, and its eyes read from side to side.
+  processing: { glow: [160, 140, 255], tint: 0.45, eye: "pill", mouth: null, prop: "arc", scan: "sweep" },
+  // Making something: sparks rise off it, and three dots bounce as in a chat that is typing.
+  generating: { glow: [255, 200, 150], tint: 0.4, eye: "wide", mouth: null, prop: "dots", look: [0.2, -0.35] },
 };
 
-const PROPS: Prop[] = ["arcs", "bars", "bubbles", "stress"];
+const PROPS: Prop[] = ["arcs", "bars", "bubbles", "stress", "orbit", "arc", "dots"];
 
 // ── Path helpers ─────────────────────────────────────────────────────────────
 
@@ -302,7 +316,7 @@ export class Robo {
   private glowI = 1;
   private glowCol: RGB = [...MASCOT_STATES.idle.glow];
   private tint = 0;
-  private props: Record<Prop, number> = { arcs: 0, bars: 0, bubbles: 0, stress: 0 };
+  private props: Record<Prop, number> = { arcs: 0, bars: 0, bubbles: 0, stress: 0, orbit: 0, arc: 0, dots: 0 };
 
   // Inputs, fed by the host.
   /** Where to look, -1…1; wins over idle glances until `lookActiveUntil` (seconds). */
@@ -322,6 +336,8 @@ export class Robo {
   private nextGlance = 0;
   private glance: [number, number] = [0, 0];
   private lastAmbient = 0;
+  private lastSpark = 0;
+  private nextNod = 0;
   private pokes: number[] = [];
 
   // Spring lag of soft add-on parts (the pompom, the muffler's tail), -1…1.
@@ -393,7 +409,20 @@ export class Robo {
       case "dizzy":
         this.spin(1300, 2);
         break;
+      case "nodding":
+        this.nextNod = 0;
+        break;
     }
+  }
+
+  /** Three nods: its face dips, comes back, dips again. */
+  private nod() {
+    this.anim("pitch", [
+      [0.85, 170, Ease.out], [-0.05, 160, Ease.inOut],
+      [0.85, 170, Ease.out], [-0.05, 160, Ease.inOut],
+      [0.7, 160, Ease.out], [0, 260, Ease.inOut],
+    ]);
+    this.anim("sy", [[0.97, 170, Ease.out], [1, 300, Ease.back]]);
   }
 
   blink(onClosed?: () => void) {
@@ -527,6 +556,9 @@ export class Robo {
     if (this.studioPose) {
       gx = REF_YAW;
       gy = 0;
+    } else if (cfg.scan === "sweep") {
+      gx = Math.sin(t * 1.9) * 0.9;
+      gy = -0.1 + Math.sin(t * 0.7) * 0.2;
     } else if (cfg.look) {
       gx = cfg.look[0] * 0.8 + this.lookX * 0.2;
       gy = cfg.look[1] * 0.8 + this.lookY * 0.2;
@@ -541,7 +573,8 @@ export class Robo {
       [gx, gy] = this.glance;
     }
     if (this.state === "dizzy") gx += Math.sin(t * 8) * 0.25;
-    const kLook = 1 - Math.pow(0.002, dt);
+    // Quick to follow: the gaze closes most of the gap in a tenth of a second.
+    const kLook = 1 - Math.pow(0.0001, dt);
     if (!this.locks.has("yaw")) this.yaw += (clamp(gx, -1, 1) - this.yaw) * kLook;
     if (!this.locks.has("pitch")) this.pitch += (clamp(gy, -1, 1) - this.pitch) * kLook;
 
@@ -599,6 +632,15 @@ export class Robo {
       this.nextBlink = n + 2.2 + Math.random() * 3.4;
     }
     if (this.eyeOverride && n > this.eyeOverrideUntil) this.eyeOverride = null;
+
+    if (this.state === "nodding" && !still && !this.locks.has("pitch") && n > this.nextNod) {
+      this.nod();
+      this.nextNod = n + 2.4;
+    }
+    if (this.state === "generating" && n - this.lastSpark > 0.32) {
+      this.lastSpark = n;
+      this.emit("spark", 2);
+    }
 
     if (n - this.lastAmbient > 1.4) {
       this.lastAmbient = n;
@@ -759,20 +801,35 @@ export class Robo {
     return canvas;
   }
 
-  /** Stays on the floor while it floats: smaller and fainter as it rises. */
+  /**
+   * Its shadow on the floor: a tight dark core where it is closest and a wide
+   * soft penumbra round it, both falling off smoothly to nothing (no rim).
+   * Floating higher makes it broader, paler and softer, as light does.
+   */
   private drawShadow(x: Ctx, cx: number, cy: number, R: number) {
-    const k = 1 - clamp(-this.oy, 0, 0.4) * 1.2;
-    const r = 0.78 * R * k;
-    x.save();
+    const lift = clamp(-this.oy, 0, 0.4);
+    const spread = 1 + lift * 1.6;
+    const fade = 1 - lift * 1.6;
+    const half = (this.head === "screen" ? 1.12 : 0.9) * R;
     const bottom = this.head === "screen" ? SCREEN_HEAD_BOTTOM : BODY_BOTTOM;
-    x.translate(cx + this.ox * R, cy + (bottom + 0.16) * R);
-    x.scale(1, 0.16);
-    x.fillStyle = radial(x, 0, 0, 0, r, [
-      [0, [0, 0, 0], 0.6 * k], [0.55, [0, 0, 0], 0.28 * k], [1, [0, 0, 0], 0],
-    ]);
-    x.beginPath();
-    x.arc(0, 0, r, 0, TAU);
-    x.fill();
+    x.save();
+    x.translate(cx + this.ox * R, cy + (bottom + 0.2) * R);
+    x.scale(1, 0.13);
+    // A gaussian falloff from the centre, as soft shadows have.
+    const layer = (r: number, alpha: number) => {
+      const g = x.createRadialGradient(0, 0, 0, 0, 0, r);
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        g.addColorStop(t, `rgba(18,16,28,${(alpha * Math.exp(-Math.pow(t * 2.1, 2))).toFixed(4)})`);
+      }
+      x.fillStyle = g;
+      x.beginPath();
+      x.arc(0, 0, r, 0, TAU);
+      x.fill();
+    };
+    layer(half * 1.3 * spread, 0.16 * fade);
+    layer(half * 0.8 * spread, 0.2 * fade);
+    layer(half * 0.5, 0.34 * fade);
     x.restore();
   }
 
@@ -1170,6 +1227,53 @@ export class Robo {
         const bob = Math.sin(t * 2 + i * 1.3) * 0.02;
         ball(x, bx * R, (by + bob) * R, br * R * Ease.back(p), p);
       });
+    }
+
+    // Round the head: wider for the screen head, which is wider than a ball.
+    const screen = this.head === "screen";
+    const ringX = (screen ? 1.55 : 1.32) * R;
+    const ringY = (screen ? 1.26 : 1.3) * R;
+
+    if (P.orbit > 0) {
+      // Loading: two comets of light chase each other round the head.
+      for (const side of [0, Math.PI]) {
+        for (let i = 0; i < 11; i++) {
+          const a = t * 2.7 - i * 0.2 + side;
+          const k = 1 - i / 11;
+          ball(x, Math.cos(a) * ringX, Math.sin(a) * ringY, R * (0.016 + 0.062 * k), P.orbit * (0.2 + 0.8 * k));
+        }
+      }
+    }
+
+    if (P.arc > 0) {
+      // Processing: a faint track, and a bright arc running round it.
+      x.save();
+      x.scale(ringX / ringY, 1);
+      const r = ringY;
+      x.lineWidth = R * 0.05;
+      x.strokeStyle = rgba([150, 156, 175], 0.18 * P.arc);
+      x.beginPath();
+      x.arc(0, 0, r, 0, TAU);
+      x.stroke();
+      const a0 = t * 3.4;
+      const sweep = 1.5 + 0.5 * Math.sin(t * 1.6);
+      for (const [w, col, al] of [[0.06, [150, 156, 175], 0.9], [0.036, [252, 252, 255], 1]] as const) {
+        x.lineWidth = R * w;
+        x.strokeStyle = rgba(col as RGB, al * P.arc);
+        x.beginPath();
+        x.arc(0, 0, r, a0, a0 + sweep);
+        x.stroke();
+      }
+      x.restore();
+    }
+
+    if (P.dots > 0) {
+      // Generating: three dots bounce in turn, as a chat does while it writes.
+      for (let i = 0; i < 3; i++) {
+        const bx = (screen ? 0.95 : 0.8) * R + i * 0.21 * R;
+        const by = -(screen ? 1.12 : 1.02) * R - Math.max(0, Math.sin(t * 6.5 - i * 0.9)) * 0.1 * R;
+        ball(x, bx, by, 0.065 * R, P.dots);
+      }
     }
 
     if (P.stress > 0) {

@@ -28,7 +28,7 @@ export interface MountOptions {
   shadow?: boolean;
   /** Robo's eyes follow the pointer anywhere on the page. Default true. */
   followPointer?: boolean;
-  /** How far the pointer must be from Robo, in CSS px, to look fully to one side. Default 320. */
+  /** How far the pointer must be from Robo, in CSS px, to look almost fully to one side (it follows a curve, so a short way is already most of a turn). Default 260. */
   lookReach?: number;
   /** "auto" follows the system's reduced-motion setting; true or false forces it. Default "auto". */
   reducedMotion?: "auto" | boolean;
@@ -80,7 +80,7 @@ export function mountRobo(canvas: HTMLCanvasElement, opts: MountOptions = {}): R
 
   const radius = opts.radius ?? 0.3;
   const maxDpr = opts.maxPixelRatio ?? 2;
-  const reach = opts.lookReach ?? 320;
+  const reach = opts.lookReach ?? 260;
 
   let raf = 0;
   let last = performance.now();
@@ -138,7 +138,9 @@ export function mountRobo(canvas: HTMLCanvasElement, opts: MountOptions = {}): R
   };
   const onMove = (e: PointerEvent) => {
     const r = canvas.getBoundingClientRect();
-    lookAt((e.clientX - (r.left + r.width / 2)) / reach, (e.clientY - (r.top + r.height / 2)) / reach);
+    // A curve, not a line: a little way from it is already most of a turn, and it eases out at the edge.
+    const f = (d: number) => Math.tanh((d / reach) * 1.7) / Math.tanh(1.7);
+    lookAt(f(e.clientX - (r.left + r.width / 2)), f((e.clientY - (r.top + r.height / 2)) * 1.4));
   };
   if (opts.followPointer !== false) window.addEventListener("pointermove", onMove, { passive: true });
 

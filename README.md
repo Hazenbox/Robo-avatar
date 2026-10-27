@@ -1,6 +1,6 @@
 # Robo avatar
 
-A tiny animated robot for your app, drawn live in Canvas 2D with a WebGL2 body. No images, no Lottie, no runtime dependencies. It has two heads, nine states, six emotes, wearable add-ons, and three fur styles, and it can follow the pointer, react to a voice level, or become a video-call `MediaStream`.
+A tiny animated robot for your app, drawn live in Canvas 2D with a WebGL2 body. No images, no Lottie, no runtime dependencies. It has two heads, thirteen states, six emotes, wearable add-ons, and three fur styles, and it can follow the pointer, react to a voice level, or become a video-call `MediaStream`.
 
 **Try it:** the playground is deployed at https://hazenbox.github.io/Robo-avatar/. Or run it locally: `npm install && npm run dev` opens the playground (every control, a sheet of all states, sizes, and a live video stream). Your look is kept in the URL, so you can share it.
 
@@ -46,7 +46,7 @@ video.srcObject = feed.stream;
 
 ## States, emotes, add-ons
 
-- States: `idle`, `listening`, `speaking`, `thinking`, `happy`, `unimpressed`, `error`, `sleeping`, `dizzy`
+- States: `idle`, `listening`, `speaking`, `thinking`, `happy`, `unimpressed`, `error`, `sleeping`, `dizzy`, `nodding`, and for an AI that is working: `loading` (a ring of light circles it), `processing` (a spinner round it, eyes reading side to side) and `generating` (sparks rise off it, three dots bounce)
 - Emotes: `love`, `proud`, `surprised`, `wink`, `excited`, `confused`
 - Heads: `classic` (a lit ball with a face plate) or `screen` (a cream helmet with a black screen, a rainbow rim, a horn and ear pads): `look: { head: "screen" }`
 - Fur: `silky`, `minky`, `pompom`, each with tunable numbers (see `FUR_PARAMS`, `FACE_PARAMS`)
@@ -62,7 +62,7 @@ video.srcObject = feed.stream;
 | `glow` | `0.3` | Halo strength, 0 to 1 |
 | `shadow` | `true` | Floor shadow |
 | `followPointer` | `true` | Eyes follow the pointer |
-| `lookReach` | `320` | How far away (px) the pointer still counts |
+| `lookReach` | `260` | How far away (px) the pointer must be for a full look to one side |
 | `reducedMotion` | `"auto"` | `true`, `false`, or follow the OS setting |
 | `radius` | `0.3` | Body size as a share of the canvas |
 | `pokeOnClick` | `true` | Click to poke; three quick pokes make it dizzy |
