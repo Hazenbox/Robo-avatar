@@ -1,10 +1,10 @@
 /**
- * Browser-only: Robo as a live video feed (a MediaStream), for a virtual
+ * Browser-only: Zoro as a live video feed (a MediaStream), for a virtual
  * camera, a video-call tile, a WebRTC peer or a screen recorder.
  *
  * Same idea as drawing a canvas into a stream, except the canvas is alive:
- * Robo blinks, glances about, floats, and moves through whatever states you
- * give it. A call with a participant that has no camera can show Robo instead.
+ * Zoro blinks, glances about, floats, and moves through whatever states you
+ * give it. A call with a participant that has no camera can show Zoro instead.
  *
  * Frames are driven from a Worker's timer, not requestAnimationFrame and not a
  * window timer. rAF stops dead in a background tab and window timers drop to
@@ -14,12 +14,12 @@
  */
 
 import type { MascotLook } from "./look";
-import { Robo, type MascotAddon, type MascotEmote, type MascotState } from "./robo";
+import { Zoro, type MascotAddon, type MascotEmote, type MascotState } from "./zoro";
 
 export type MascotStreamHandle = {
   stream: MediaStream;
   stop: () => void;
-  /** What Robo is doing; speaking, while it lasts, wins over this. */
+  /** What Zoro is doing; speaking, while it lasts, wins over this. */
   setState: (state: MascotState) => void;
   emote: (emote: MascotEmote) => void;
   /** Read every frame. Wire it to "is its voice playing right now". */
@@ -88,7 +88,7 @@ export function createMascotMediaStream(opts?: {
   /** Its whole look; takes precedence over `addons`. */
   look?: MascotLook;
 }): MascotStreamHandle {
-  // 16:9, the shape of a video-call tile, so nothing of Robo is cropped.
+  // 16:9, the shape of a video-call tile, so nothing of Zoro is cropped.
   const W = opts?.width ?? 960;
   const H = opts?.height ?? 540;
   const fps = opts?.fps ?? 15;
@@ -99,7 +99,7 @@ export function createMascotMediaStream(opts?: {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas 2d unavailable");
 
-  const bot = new Robo({ glowAmount: 0.3, addons: opts?.addons, look: opts?.look });
+  const bot = new Zoro({ glowAmount: 0.3, addons: opts?.addons, look: opts?.look });
   const syllables = createSyllables();
   let baseState: MascotState = "idle";
   let speakingSource: (() => boolean) | null = null;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RoboAvatar } from "robo-avatar/react";
+import { ZoroAvatar } from "zoro-avatar/react";
 import {
   ADDON_LABEL,
   COLOR_SWATCHES,
@@ -9,14 +9,14 @@ import {
   MASCOT_ADDONS,
   MASCOT_STATES,
   colorOf,
-  createRoboMediaStream,
+  createZoroMediaStream,
   toggleAddon,
   type MascotEmote,
   type MascotLook,
   type MascotState,
-  type RoboHandle,
-  type RoboStreamHandle,
-} from "robo-avatar";
+  type ZoroHandle,
+  type ZoroStreamHandle,
+} from "zoro-avatar";
 import { FaceSettings, FurSettings, Group, Pill, Tile } from "./parts";
 import { initialLook, reactSnippet, saveLook } from "./share";
 import { createSynth } from "./voice";
@@ -68,15 +68,15 @@ function ExpressionCell({ label, state, emote, look, glow, reduced, onPick, regi
   glow: number;
   reduced: boolean;
   onPick: () => void;
-  register: (h: RoboHandle | null) => void;
+  register: (h: ZoroHandle | null) => void;
 }) {
-  const handle = useRef<RoboHandle | null>(null);
+  const handle = useRef<ZoroHandle | null>(null);
   useEffect(() => {
     if (emote) handle.current?.emote(emote, Infinity);
   }, [emote]);
   return (
     <button type="button" className="cell" onClick={onPick}>
-      <RoboAvatar
+      <ZoroAvatar
         ref={(h) => {
           handle.current = h;
           register(h);
@@ -124,7 +124,7 @@ function MoonIcon() {
   );
 }
 
-const THEME_KEY = "robo-avatar:theme";
+const THEME_KEY = "zoro-avatar:theme";
 
 /** The page's theme: dark until the visitor picks one, and then theirs. */
 function useTheme() {
@@ -172,14 +172,14 @@ export default function App() {
   const setLook: SetLook = useCallback((change) => setLookState((l) => (typeof change === "function" ? change(l) : { ...l, ...change })), []);
   useEffect(() => saveLook(look), [look]);
 
-  const stage = useRef<RoboHandle | null>(null);
-  const handles = useRef(new Map<string, RoboHandle>());
-  const reg = (id: string) => (h: RoboHandle | null) => {
+  const stage = useRef<ZoroHandle | null>(null);
+  const handles = useRef(new Map<string, ZoroHandle>());
+  const reg = (id: string) => (h: ZoroHandle | null) => {
     if (h) handles.current.set(id, h);
     else handles.current.delete(id);
   };
   const video = useRef<HTMLVideoElement | null>(null);
-  const feed = useRef<RoboStreamHandle | null>(null);
+  const feed = useRef<ZoroStreamHandle | null>(null);
   const live = useRef({ state });
   live.current = { state };
   const playTimer = useRef<number | undefined>(undefined);
@@ -197,22 +197,22 @@ export default function App() {
     playTimer.current = window.setTimeout(() => setPlaying(null), EMOTE_MS);
   }, []);
 
-  // Three quick pokes on Robo make it dizzy; the engine tells us, and we put it back after a moment.
+  // Three quick pokes on Zoro make it dizzy; the engine tells us, and we put it back after a moment.
   useEffect(() => {
-    const robo = stage.current?.robo;
-    if (!robo) return;
-    robo.onDizzy = () => {
+    const zoro = stage.current?.zoro;
+    if (!zoro) return;
+    zoro.onDizzy = () => {
       choose("dizzy");
       window.setTimeout(() => {
         if (live.current.state === "dizzy") choose("idle");
       }, 2600);
     };
     return () => {
-      robo.onDizzy = null;
+      zoro.onDizzy = null;
     };
   }, [choose]);
 
-  // One loop feeds a made-up voice level to every Robo on the page, so Speaking and Listening move.
+  // One loop feeds a made-up voice level to every Zoro on the page, so Speaking and Listening move.
   useEffect(() => {
     const synth = createSynth();
     let raf = 0;
@@ -233,11 +233,11 @@ export default function App() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // The video-call stream: the same Robo, as a MediaStream.
+  // The video-call stream: the same Zoro, as a MediaStream.
   useEffect(() => {
-    let f: RoboStreamHandle;
+    let f: ZoroStreamHandle;
     try {
-      f = createRoboMediaStream({ look });
+      f = createZoroMediaStream({ look });
     } catch (e) {
       setFeedError(e instanceof Error ? e.message : "This browser cannot make a video stream");
       return;
@@ -292,10 +292,10 @@ export default function App() {
     <>
       <div id="top" className="topWrap" data-scrolled={scrolled || undefined}>
         <header className="top">
-          <RoboAvatar size={52} look={look} glow={0.2} shadow={false} label="Robo" />
+          <ZoroAvatar size={52} look={look} glow={0.2} shadow={false} label="Zoro" />
           <h1 className="title">
-            <a href="#top" aria-label="Robo avatar, back to the top">
-              Robo <span>avatar</span>
+            <a href="#top" aria-label="Zoro avatar, back to the top">
+              Zoro <span>avatar</span>
             </a>
           </h1>
           <nav className="nav" aria-label="Sections">
@@ -307,7 +307,7 @@ export default function App() {
           <button type="button" className="iconBtn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Light mode" : "Dark mode"}>
             {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
-          <a className="iconBtn" href="https://github.com/Hazenbox/Robo-avatar" aria-label="Robo avatar on GitHub" title="GitHub">
+          <a className="iconBtn" href="https://github.com/Hazenbox/Zoro-avatar" aria-label="Zoro avatar on GitHub" title="GitHub">
             <GitHubIcon />
           </a>
         </header>
@@ -317,7 +317,7 @@ export default function App() {
         <div className="layout">
           <section className="stageColumn" aria-label="Stage">
             <div className="stageBox">
-              <RoboAvatar
+              <ZoroAvatar
                 ref={(h) => {
                   stage.current = h;
                   reg("stage")(h);
@@ -328,10 +328,10 @@ export default function App() {
                 glow={glow / 100}
                 shadow={shadow}
                 reducedMotion={reduced ? true : "auto"}
-                label="Robo, the animated mascot. Click it to poke it."
+                label="Zoro, the animated mascot. Click it to poke it."
               />
             </div>
-            <p className="hint center">Keys 1–9 pick a state · L, P, S, W, E, C play an emote · click Robo to poke it, three times to make it dizzy</p>
+            <p className="hint center">Keys 1–9 pick a state · L, P, S, W, E, C play an emote · click Zoro to poke it, three times to make it dizzy</p>
           </section>
 
           <aside className="side" aria-label="Controls">
@@ -453,7 +453,7 @@ export default function App() {
           <div className="sheet">
             {STATES.map((s) => (
               <button key={s} type="button" className="cell" aria-pressed={state === s} onClick={() => choose(s)}>
-                <RoboAvatar ref={reg(`sheet-${s}`)} className="cellCanvas" state={s} look={look} glow={glow / 100} shadow={false} followPointer={false} pokeOnClick={false} reducedMotion={reduced ? true : "auto"} radius={0.28} />
+                <ZoroAvatar ref={reg(`sheet-${s}`)} className="cellCanvas" state={s} look={look} glow={glow / 100} shadow={false} followPointer={false} pokeOnClick={false} reducedMotion={reduced ? true : "auto"} radius={0.28} />
                 <span>{STATE_LABEL[s]}</span>
               </button>
             ))}
@@ -465,13 +465,13 @@ export default function App() {
           <div className="sizes">
             {SIZES.map((sz) => (
               <figure key={sz}>
-                <RoboAvatar ref={reg(`size-${sz}`)} size={sz} look={look} state={state} shadow={false} followPointer={false} pokeOnClick={false} reducedMotion={reduced ? true : "auto"} />
+                <ZoroAvatar ref={reg(`size-${sz}`)} size={sz} look={look} state={state} shadow={false} followPointer={false} pokeOnClick={false} reducedMotion={reduced ? true : "auto"} />
                 <figcaption>{sz} px</figcaption>
               </figure>
             ))}
             <figure className="tile16x9">
-              <video ref={video} muted playsInline aria-label="Robo as a live video stream" />
-              <figcaption>{feedError ?? "createRoboMediaStream(): the same Robo as a MediaStream, for a virtual camera or a video call tile"}</figcaption>
+              <video ref={video} muted playsInline aria-label="Zoro as a live video stream" />
+              <figcaption>{feedError ?? "createZoroMediaStream(): the same Zoro as a MediaStream, for a virtual camera or a video call tile"}</figcaption>
             </figure>
           </div>
         </section>
@@ -498,7 +498,7 @@ export default function App() {
 
       <footer className="foot">
         <p>
-          Robo avatar is MIT licensed. Inspired by coucou&apos;s Mochi.
+          Zoro avatar is MIT licensed. Inspired by coucou&apos;s Mochi.
         </p>
       </footer>
     </>

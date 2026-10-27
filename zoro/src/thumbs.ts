@@ -1,11 +1,11 @@
 /**
- * Small pictures of Robo for pickers and wardrobes: wearing one thing, drawn by the
+ * Small pictures of Zoro for pickers and wardrobes: wearing one thing, drawn by the
  * engine itself. Each is drawn once per look and size, then copied wherever
  * it is shown, so a menu full of them costs nothing to open twice.
  */
 
 import { DEFAULT_LOOK, type MascotLook } from "./look";
-import { Robo } from "./robo";
+import { Zoro } from "./zoro";
 
 const cache = new Map<string, HTMLCanvasElement>();
 
@@ -24,7 +24,7 @@ export function lookThumb(look: MascotLook, size: number, dpr: number): HTMLCanv
   canvas.height = Math.round(size * dpr);
   const x = canvas.getContext("2d");
   if (x) {
-    const bot = new Robo({ reduced: true, glowAmount: 0.15, shadow: false, look });
+    const bot = new Zoro({ reduced: true, glowAmount: 0.15, shadow: false, look });
     bot.update(1 / 60);
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
     // Room for the widest pieces: the headset.

@@ -18,7 +18,7 @@ import {
   type FaceGroup,
   type FurParam,
   type MascotLook,
-} from "robo-avatar";
+} from "zoro-avatar";
 
 /** What a settings row needs to know about one setting. */
 interface Spec {
@@ -54,7 +54,7 @@ export function Pill({ on, onClick, children, disabled, label }: { on: boolean; 
   );
 }
 
-/** A picture of Robo wearing one thing, drawn by the engine itself. */
+/** A picture of Zoro wearing one thing, drawn by the engine itself. */
 function Thumb({ look, size }: { look: MascotLook; size: number }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
   const key = JSON.stringify(look);
@@ -201,7 +201,7 @@ export function FurSettings({ look, setLook }: { look: MascotLook; setLook: SetL
   );
 }
 
-/** Every setting behind the face. Shows only what applies to the face Robo has now. */
+/** Every setting behind the face. Shows only what applies to the face Zoro has now. */
 export function FaceSettings({ look, setLook }: { look: MascotLook; setLook: SetLook }) {
   const values = faceValues(look.faceTune);
   const tweaked = Object.keys(look.faceTune).length;

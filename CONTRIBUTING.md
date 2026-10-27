@@ -1,6 +1,6 @@
-# Contributing to Robo
+# Contributing to Zoro
 
-Thanks for wanting to help. Robo is small on purpose, so contributions are easy to review.
+Thanks for wanting to help. Zoro is small on purpose, so contributions are easy to review.
 
 ## Good first things
 
@@ -14,7 +14,7 @@ If it's a big change (a new head, a new rendering approach), please open an issu
 ## Run it
 
 ```bash
-cd robo
+cd zoro
 npm install
 npm run dev      # the playground, with every control
 npm run check    # typecheck, tests, library build, playground build
@@ -26,9 +26,9 @@ npm run check    # typecheck, tests, library build, playground build
 
 | Folder | What's in it |
 | --- | --- |
-| `robo/src` | The library: the engine, the two heads, wearables, fur, the React wrapper |
-| `robo/playground` | The demo site (a Vite app that runs on the library's source) |
-| `robo/tests` | Tests for the engine and the look |
+| `zoro/src` | The library: the engine, the two heads, wearables, fur, the React wrapper |
+| `zoro/playground` | The demo site (a Vite app that runs on the library's source) |
+| `zoro/tests` | Tests for the engine and the look |
 | `assets` | The animations used in the README |
 
 ## What a good change looks like

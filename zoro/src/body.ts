@@ -1,5 +1,5 @@
 /**
- * Robo's body: its outline, and an optional coat of fur.
+ * Zoro's body: its outline, and an optional coat of fur.
  *
  * The body is an ellipse, a touch wider than tall. Everything is in R, its
  * body radius, around its centre.

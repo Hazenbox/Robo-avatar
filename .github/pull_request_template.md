@@ -8,6 +8,6 @@
 
 ## Checklist
 
-- [ ] `npm run check` passes (in `robo/`)
+- [ ] `npm run check` passes (in `zoro/`)
 - [ ] Moving things calm down under reduced motion
 - [ ] No new runtime dependencies

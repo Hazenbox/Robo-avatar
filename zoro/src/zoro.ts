@@ -1,5 +1,5 @@
 /**
- * Robo: a lit sphere with an inset face plate, drawn entirely in Canvas 2D
+ * Zoro: a lit sphere with an inset face plate, drawn entirely in Canvas 2D
  * (and, for the turning solid body, WebGL2). No images, no Rive, no Lottie.
  *
  * The design is one table of states, a handful of animated numbers moved by
@@ -257,7 +257,7 @@ function ball(x: Ctx, X: number, Y: number, r: number, alpha: number) {
 
 // ── Engine ───────────────────────────────────────────────────────────────────
 
-export class Robo {
+export class Zoro {
   /** prefers-reduced-motion: no float, bounce or particles. */
   reduced: boolean;
   /** 0 = no halo, 1 = a strong one. */
@@ -322,7 +322,7 @@ export class Robo {
   lookX = 0;
   lookY = 0;
   lookActiveUntil = 0;
-  /** Robo's own voice level, 0…1: drives the mouth and the level bars. */
+  /** Zoro's own voice level, 0…1: drives the mouth and the level bars. */
   voice = 0;
   /** The meeting's level, 0…1: lifts the listening arcs. */
   room = 0;

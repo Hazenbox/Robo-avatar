@@ -1,5 +1,5 @@
 /**
- * Things Robo can wear: a visor, goggles, a headset and a knitted scarf.
+ * Things Zoro can wear: a visor, goggles, a headset and a knitted scarf.
  *
  * Add-ons are strictly additive. The engine draws none of this unless an
  * add-on is switched on, so with the set empty it looks exactly as it

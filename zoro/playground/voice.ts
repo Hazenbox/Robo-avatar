@@ -1,4 +1,4 @@
-/** Where Robo's voice level comes from in the playground: a made-up voice. */
+/** Where Zoro's voice level comes from in the playground: a made-up voice. */
 
 /** Syllables every 70 to 180 ms with a breath between phrases: a stand-in for a voice. Returns a function of time in seconds. */
 export function createSynth() {

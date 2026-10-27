@@ -1,6 +1,6 @@
-import { DEFAULT_LOOK, lookOf, sameLook, type MascotLook } from "robo-avatar";
+import { DEFAULT_LOOK, lookOf, sameLook, type MascotLook } from "zoro-avatar";
 
-const KEY = "robo-avatar:look:v3";
+const KEY = "zoro-avatar:look:v3";
 
 const toB64 = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const fromB64 = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
@@ -44,5 +44,5 @@ export function reactSnippet(look: MascotLook): string {
     if (JSON.stringify(look[k]) !== JSON.stringify(DEFAULT_LOOK[k])) diff[k] = look[k];
   }
   const props = Object.keys(diff).length ? ` look={${JSON.stringify(diff)}}` : "";
-  return `import { RoboAvatar } from "robo-avatar/react";\n\n<RoboAvatar size={160}${props} />`;
+  return `import { ZoroAvatar } from "zoro-avatar/react";\n\n<ZoroAvatar size={160}${props} />`;
 }

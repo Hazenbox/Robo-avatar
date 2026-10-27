@@ -1,5 +1,5 @@
 /**
- * Robo's face, as tunable settings: the plate's shape and place, its eyes,
+ * Zoro's face, as tunable settings: the plate's shape and place, its eyes,
  * and the details of whichever face it has -- the smooth inset plate on it
  * plain body, or the patch of pale velvet it becomes on fur.
  *

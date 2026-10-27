@@ -7,7 +7,7 @@
 <br>
 <br>
 
-# Robo
+# Zoro
 
 ### A face for your AI.
 
@@ -15,7 +15,7 @@ Little robots that show what your AI is doing,<br>so waiting feels like watching
 
 <br>
 
-**[▶ &nbsp;Play with them live](https://roboavatar.vercel.app)**
+**[▶ &nbsp;Play with them live](https://zoroavatar.vercel.app)**
 
 <br>
 
@@ -33,7 +33,7 @@ Those few seconds are when people decide whether to trust it. A spinner says *"w
 
 **Give your AI a face, and let the face do the talking.**
 
-Robo listens when you type. It thinks. It goes off to read a dozen sources. Then it writes your answer, line by line, and gives a little nod when it's done. No explanation needed, anyone gets it at a glance.
+Zoro listens when you type. It thinks. It goes off to read a dozen sources. Then it writes your answer, line by line, and gives a little nod when it's done. No explanation needed, anyone gets it at a glance.
 
 <div align="center">
 <img src="assets/chat.gif" alt="A chat where someone asks about Upen, and the robot warms up, reads Upen's work, then writes the answer" width="100%">
@@ -76,7 +76,7 @@ Both of them follow whatever you point at, blink, breathe and turn to look at yo
 
 <br>
 
-| When your AI is… | Robo… |
+| When your AI is… | Zoro… |
 | --- | --- |
 | **Listening** | leans in and brightens with your voice |
 | **Thinking** | looks up, mid-thought |
@@ -98,7 +98,7 @@ Pick a colour. Add a knitted scarf, goggles, a visor or a headset. Tune the fur.
 
 ## Why you'll like it
 
-- **Nothing to download.** No image files, no animation files. Robo draws itself, live, at any size, crisp on every screen.
+- **Nothing to download.** No image files, no animation files. Zoro draws itself, live, at any size, crisp on every screen.
 - **Tiny.** About 45 KB, less than a single photo.
 - **Kind to people.** It stops when it's off screen, and calms down for anyone who asks their device for less motion.
 - **Private.** Nothing is recorded or sent anywhere.
@@ -109,23 +109,23 @@ Pick a colour. Add a knitted scarf, goggles, a visor or a headset. Tune the fur.
 Using React? This is the whole thing:
 
 ```tsx
-import { RoboAvatar } from "robo-avatar/react";
+import { ZoroAvatar } from "zoro-avatar/react";
 
-<RoboAvatar size={64} state="thinking" />
+<ZoroAvatar size={64} state="thinking" />
 ```
 
-Change `state` as your AI moves along, and Robo follows. Not a developer? Open the [playground](https://roboavatar.vercel.app), design your robot, and hand over the code it writes for you.
+Change `state` as your AI moves along, and Zoro follows. Not a developer? Open the [playground](https://zoroavatar.vercel.app), design your robot, and hand over the code it writes for you.
 
-> Robo isn't on npm yet. Until it is, clone this repo, run `npm install && npm run build` inside the `robo` folder, and `npm link`.
+> Zoro isn't on npm yet. Until it is, clone this repo, run `npm install && npm run build` inside the `zoro` folder, and `npm link`.
 
 ## What's inside
 
 | Folder | What's in it |
 | --- | --- |
-| `robo/` | Everything: the code, the playground and the tests |
-| `assets/` | The animations on this page, made with Robo itself |
+| `zoro/` | Everything: the code, the playground and the tests |
+| `assets/` | The animations on this page, made with Zoro itself |
 
-Run the playground on your own computer: `cd robo && npm install && npm run dev`.
+Run the playground on your own computer: `cd zoro && npm install && npm run dev`.
 
 Want to help? Ideas, bug reports and new wearables are welcome: see [CONTRIBUTING](CONTRIBUTING.md).
 

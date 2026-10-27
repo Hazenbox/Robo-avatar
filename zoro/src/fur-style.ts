@@ -1,5 +1,5 @@
 /**
- * Robo's fur, as art-directable settings: a few presets, each modelled on a
+ * Zoro's fur, as art-directable settings: a few presets, each modelled on a
  * real plush fabric, and every number behind them, which the playground's fur
  * settings can tune one by one.
  *

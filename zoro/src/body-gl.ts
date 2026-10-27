@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Robo's body as a solid that turns with it, rendered on the GPU.
+ * Zoro's body as a solid that turns with it, rendered on the GPU.
  *
  * Its face turns by sliding across the body (the original bot's yaw and pitch). On
  * its own smooth, round body that is all a turn needs -- a plain ball looks

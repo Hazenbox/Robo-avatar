@@ -9,6 +9,6 @@ export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   base: "./",
   plugins: [react()],
-  resolve: { alias: [{ find: /^robo-avatar\/react$/, replacement: src("react.tsx") }, { find: /^robo-avatar$/, replacement: src("index.ts") }] },
+  resolve: { alias: [{ find: /^zoro-avatar\/react$/, replacement: src("react.tsx") }, { find: /^zoro-avatar$/, replacement: src("index.ts") }] },
   build: { outDir: "../playground-dist", emptyOutDir: true },
 });

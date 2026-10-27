@@ -1,5 +1,5 @@
-export { mountRobo, type MountOptions, type RoboHandle } from "./mount";
-export { Robo, MASCOT_STATES, type MascotState, type MascotEmote, type MascotAddon } from "./robo";
+export { mountZoro, type MountOptions, type ZoroHandle } from "./mount";
+export { Zoro, MASCOT_STATES, type MascotState, type MascotEmote, type MascotAddon } from "./zoro";
 export {
   COLOR_SWATCHES,
   DEFAULT_LOOK,
@@ -36,4 +36,4 @@ export {
   type FaceTune,
 } from "./face-style";
 export { lookThumb, thumbLook } from "./thumbs";
-export { createMascotMediaStream as createRoboMediaStream, type MascotStreamHandle as RoboStreamHandle } from "./camera";
+export { createMascotMediaStream as createZoroMediaStream, type MascotStreamHandle as ZoroStreamHandle } from "./camera";

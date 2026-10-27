@@ -1,17 +1,17 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, type CSSProperties } from "react";
 import type { MascotLook } from "./look";
-import { mountRobo, type MountOptions, type RoboHandle } from "./mount";
-import type { MascotEmote, MascotState } from "./robo";
+import { mountZoro, type MountOptions, type ZoroHandle } from "./mount";
+import type { MascotEmote, MascotState } from "./zoro";
 
-export interface RoboAvatarProps extends Omit<MountOptions, "look" | "state" | "glow" | "shadow"> {
-  /** What Robo wears and how it looks. Anything left out takes its default. */
+export interface ZoroAvatarProps extends Omit<MountOptions, "look" | "state" | "glow" | "shadow"> {
+  /** What Zoro wears and how it looks. Anything left out takes its default. */
   look?: Partial<MascotLook>;
   state?: MascotState;
   glow?: number;
   shadow?: boolean;
   /** Plays an emote each time this value changes to a new emote (set it back to null to arm it again). */
   emote?: MascotEmote | null;
-  /** Robo's voice level, 0 to 1, for the "speaking" state. */
+  /** Zoro's voice level, 0 to 1, for the "speaking" state. */
   voice?: number;
   /** The room's level, 0 to 1, for the "listening" state. */
   room?: number;
@@ -24,17 +24,17 @@ export interface RoboAvatarProps extends Omit<MountOptions, "look" | "state" | "
 }
 
 /**
- * Robo as a React component. Pass `ref` to get the same handle `mountRobo`
+ * Zoro as a React component. Pass `ref` to get the same handle `mountZoro`
  * returns, for emotes, pokes and anything else imperative.
  *
  * ```tsx
- * <RoboAvatar size={160} state="happy" look={{ fur: true }} />
+ * <ZoroAvatar size={160} state="happy" look={{ fur: true }} />
  * ```
  */
-export const RoboAvatar = forwardRef<RoboHandle | null, RoboAvatarProps>(function RoboAvatar(props, ref) {
+export const ZoroAvatar = forwardRef<ZoroHandle | null, ZoroAvatarProps>(function ZoroAvatar(props, ref) {
   const { look, state, glow, shadow, emote, voice, room, size, className, style, label, ...mountOpts } = props;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const handle = useRef<RoboHandle | null>(null);
+  const handle = useRef<ZoroHandle | null>(null);
   // What the mount saw first; later changes go through the handle, never a remount.
   const first = useRef({ look, state, glow, shadow, mountOpts });
   first.current = { look, state, glow, shadow, mountOpts };
@@ -44,7 +44,7 @@ export const RoboAvatar = forwardRef<RoboHandle | null, RoboAvatarProps>(functio
     const canvas = canvasRef.current;
     if (!canvas) return;
     const f = first.current;
-    const h = mountRobo(canvas, { ...f.mountOpts, look: f.look, state: f.state, glow: f.glow, shadow: f.shadow });
+    const h = mountZoro(canvas, { ...f.mountOpts, look: f.look, state: f.state, glow: f.glow, shadow: f.shadow });
     handle.current = h;
     return () => {
       h.destroy();
@@ -52,7 +52,7 @@ export const RoboAvatar = forwardRef<RoboHandle | null, RoboAvatarProps>(functio
     };
   }, []);
 
-  useImperativeHandle(ref, () => handle.current as RoboHandle, []);
+  useImperativeHandle(ref, () => handle.current as ZoroHandle, []);
 
   useEffect(() => {
     if (look) handle.current?.setLook(look);

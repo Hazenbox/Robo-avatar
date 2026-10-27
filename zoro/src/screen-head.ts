@@ -18,7 +18,7 @@
  *
  * It turns as a rounded box does: the screen slides across the front and
  * narrows, the side swinging toward us shows its ear and the ear's light,
- * and the horn leans the way the face points. Everything is in R, as in robo.
+ * and the horn leans the way the face points. Everything is in R, as in zoro.
  */
 
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;

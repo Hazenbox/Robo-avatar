@@ -1,5 +1,5 @@
 /**
- * Robo's whole look: what it wears, its fur, colour, and the
+ * Zoro's whole look: what it wears, its fur, colour, and the
  * two parts of its face that can be switched off.
  *
  * The default is the screen head. The classic head, by default, is round,

@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm --prefix robo ci",
-  "buildCommand": "npm --prefix robo run build:playground",
-  "outputDirectory": "robo/playground-dist"
+  "installCommand": "npm --prefix zoro ci",
+  "buildCommand": "npm --prefix zoro run build:playground",
+  "outputDirectory": "zoro/playground-dist"
 }
